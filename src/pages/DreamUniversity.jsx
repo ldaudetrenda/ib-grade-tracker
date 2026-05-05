@@ -6,23 +6,97 @@ import {
 } from 'lucide-react';
 import { useApp, getTotalScore, getPredictedGrade } from '../context/AppContext';
 
-// ─── Sample universities ───────────────────────────────────────────────────
+// labelType: 'official' | 'estimate' | 'no-fixed'
+// target is used for status comparison (competitive estimate even for no-fixed)
 const SAMPLE_UNIVERSITIES = [
-  { university: 'MIT', country: 'USA', course: 'Engineering / Science', target: 43, range: '43–45' },
-  { university: 'Harvard University', country: 'USA', course: 'General / Liberal Arts', target: 42, range: '40–45' },
-  { university: 'Stanford University', country: 'USA', course: 'General', target: 42, range: '40–45' },
-  { university: 'University of Oxford', country: 'UK', course: 'General', target: 39, range: '38–42' },
-  { university: 'University of Cambridge', country: 'UK', course: 'General', target: 40, range: '40–42' },
-  { university: 'Imperial College London', country: 'UK', course: 'Engineering / Science', target: 39, range: '38–41' },
-  { university: 'UCL', country: 'UK', course: 'General', target: 37, range: '35–40' },
-  { university: 'London School of Economics', country: 'UK', course: 'Economics / Social Science', target: 38, range: '37–40' },
-  { university: 'University of Toronto', country: 'Canada', course: 'General', target: 36, range: '34–38' },
-  { university: 'McGill University', country: 'Canada', course: 'General', target: 35, range: '33–37' },
-  { university: 'National University of Singapore', country: 'Singapore', course: 'General', target: 40, range: '38–42' },
-  { university: 'ETH Zurich', country: 'Switzerland', course: 'Engineering / Science', target: 40, range: '38–42' },
-  { university: 'University of Melbourne', country: 'Australia', course: 'General', target: 36, range: '34–38' },
-  { university: 'University of Sydney', country: 'Australia', course: 'General', target: 35, range: '33–37' },
-  { university: 'Sciences Po', country: 'France', course: 'Social Science / Politics', target: 37, range: '35–40' },
+  // ── USA ──
+  {
+    university: 'MIT', country: 'USA', course: 'Engineering / Science',
+    target: 42, range: '40–45', labelType: 'no-fixed',
+    note: 'US universities usually evaluate IB scores as part of a holistic application.',
+  },
+  {
+    university: 'Harvard University', country: 'USA', course: 'General / Liberal Arts',
+    target: 41, range: '40–45', labelType: 'no-fixed',
+    note: 'US universities usually evaluate IB scores as part of a holistic application.',
+  },
+  {
+    university: 'Stanford University', country: 'USA', course: 'General',
+    target: 41, range: '40–45', labelType: 'no-fixed',
+    note: 'US universities usually evaluate IB scores as part of a holistic application.',
+  },
+  // ── UK ──
+  {
+    university: 'University of Oxford', country: 'UK', course: 'Varies by course',
+    target: 39, range: '38–42', labelType: 'official',
+    note: 'Requirements vary by course; most require specific HL grades (e.g. 6s or 7s in relevant subjects).',
+  },
+  {
+    university: 'University of Cambridge', country: 'UK', course: 'Varies by course',
+    target: 40, range: '40–42', labelType: 'official',
+    note: 'Requirements vary by course; typically includes specific HL subject requirements.',
+  },
+  {
+    university: 'Imperial College London', country: 'UK', course: 'Engineering / Science',
+    target: 39, range: '38–41', labelType: 'official',
+    note: null,
+  },
+  {
+    university: 'UCL', country: 'UK', course: 'Varies by course',
+    target: 36, range: '34+', labelType: 'official',
+    note: 'Minimum 34+; competitive courses (Medicine, Law) typically require 38–40+.',
+  },
+  {
+    university: 'London School of Economics', country: 'UK', course: 'Economics / Social Science',
+    target: 38, range: '37–39', labelType: 'official',
+    note: "Requirement varies by course; check LSE's official entry requirements.",
+  },
+  // ── Canada ──
+  {
+    university: 'University of Toronto', country: 'Canada', course: 'Varies by program',
+    target: 36, range: '34–38', labelType: 'estimate',
+    note: 'Requirements vary by program. No single fixed IB score.',
+  },
+  {
+    university: 'McGill University', country: 'Canada', course: 'Varies by program',
+    target: 35, range: '33–37', labelType: 'estimate',
+    note: 'Requirements vary by program. No single fixed IB score.',
+  },
+  // ── Switzerland ──
+  {
+    university: 'ETH Zurich', country: 'Switzerland', course: 'Engineering / Science',
+    target: 38, range: '38/42', labelType: 'official',
+    note: 'Official minimum: 38 without bonus points (42 with). Specific HL subject requirements apply (e.g. Maths, Physics).',
+  },
+  // ── Singapore ──
+  {
+    university: 'National University of Singapore', country: 'Singapore', course: 'General',
+    target: 40, range: '38–42', labelType: 'estimate',
+    note: null,
+  },
+  // ── Australia ──
+  {
+    university: 'University of Melbourne', country: 'Australia', course: 'General',
+    target: 36, range: '34–38', labelType: 'estimate',
+    note: null,
+  },
+  {
+    university: 'University of Sydney', country: 'Australia', course: 'General',
+    target: 35, range: '33–37', labelType: 'estimate',
+    note: null,
+  },
+  // ── France ──
+  {
+    university: 'Sciences Po', country: 'France', course: 'Social Science / Politics',
+    target: 37, range: '35–40', labelType: 'estimate',
+    note: null,
+  },
+  // ── Spain ──
+  {
+    university: 'ESADE Business School', country: 'Spain', course: 'Business / Economics / Management',
+    target: 39, range: '39', labelType: 'estimate',
+    note: 'Requirements may vary by program and year. Always confirm with ESADE\'s official admissions page.',
+  },
 ];
 
 // ─── Status logic ────────────────────────────────────────────────────────────
@@ -293,32 +367,70 @@ export default function DreamUniversity() {
         <p style={{ fontSize: '0.82rem', color: 'var(--text-muted)', marginBottom: '0.75rem' }}>
           Estimated IB requirements — for reference only.
         </p>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '0.75rem' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '0.75rem' }}>
           {SAMPLE_UNIVERSITIES.map(u => {
             const status = getUniversityStatus(currentScore, u.target);
             const alreadySaved = savedUniversityNames.has(u.university.toLowerCase());
+            const labelCfg = {
+              official:   { text: 'Official',             bg: '#d1fae5', color: '#065f46' },
+              estimate:   { text: 'Estimate',             bg: '#fef3c7', color: '#92400e' },
+              'no-fixed': { text: 'No fixed requirement', bg: '#e0e7ff', color: '#3730a3' },
+            }[u.labelType] || { text: u.labelType, bg: '#f3f4f6', color: '#374151' };
+
             return (
               <div key={u.university} style={{
                 padding: '0.875rem 1rem', background: 'var(--surface)', borderRadius: 'var(--radius-sm)',
-                border: '1.5px solid var(--border)', display: 'flex', flexDirection: 'column', gap: '0.4rem',
+                border: '1.5px solid var(--border)', display: 'flex', flexDirection: 'column', gap: '0.5rem',
               }}>
+                {/* Header row */}
                 <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '0.5rem' }}>
-                  <div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ fontWeight: 700, fontSize: '0.9rem' }}>{u.university}</div>
                     <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{u.country} · {u.course}</div>
                   </div>
+                  {/* Status badge */}
                   <div style={{
-                    fontSize: '0.72rem', fontWeight: 700, padding: '0.15rem 0.5rem', borderRadius: '100px',
+                    fontSize: '0.7rem', fontWeight: 700, padding: '0.15rem 0.5rem', borderRadius: '100px',
                     background: status.bg, color: status.color, whiteSpace: 'nowrap', flexShrink: 0,
                   }}>
                     {status.label}
                   </div>
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <span style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>
-                    Est. <strong style={{ color: 'var(--text)' }}>{u.target}</strong>
-                    {u.range && <span style={{ color: 'var(--text-light)' }}> ({u.range})</span>}
+
+                {/* Label + score row */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+                  <span style={{
+                    fontSize: '0.68rem', fontWeight: 700, padding: '0.15rem 0.5rem', borderRadius: '4px',
+                    background: labelCfg.bg, color: labelCfg.color,
+                  }}>
+                    {labelCfg.text}
                   </span>
+                  {u.labelType === 'no-fixed' ? (
+                    <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)', fontStyle: 'italic' }}>
+                      No fixed IB requirement — holistic admissions
+                    </span>
+                  ) : (
+                    <span style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>
+                      {u.labelType === 'official' ? 'Requirement:' : 'Competitive est.:'}{' '}
+                      <strong style={{ color: 'var(--text)' }}>{u.range || u.target}</strong>
+                    </span>
+                  )}
+                  {u.labelType === 'no-fixed' && (
+                    <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
+                      Competitive est.: <strong>{u.range}</strong>
+                    </span>
+                  )}
+                </div>
+
+                {/* Note */}
+                {u.note && (
+                  <p style={{ fontSize: '0.72rem', color: 'var(--text-muted)', margin: 0, lineHeight: 1.4 }}>
+                    {u.note}
+                  </p>
+                )}
+
+                {/* Save button */}
+                <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '0.125rem' }}>
                   <button
                     className="btn btn-ghost btn-sm"
                     style={{ fontSize: '0.72rem', padding: '0.2rem 0.5rem', opacity: alreadySaved ? 0.5 : 1 }}
