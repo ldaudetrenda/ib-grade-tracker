@@ -20,6 +20,7 @@ export const IB_SUBJECTS = [
   { name: 'French ab initio', group: 2, groupName: 'Language Acquisition', canHL: false },
   { name: 'German ab initio', group: 2, groupName: 'Language Acquisition', canHL: false },
   // Group 3 – Individuals & Societies
+  { name: 'Brazilian Social Studies (BSS)', group: 'bss', groupName: 'Business & Social Sciences', canHL: true },
   { name: 'Business Management', group: 'bss', groupName: 'Business & Social Sciences', canHL: true },
   { name: 'Economics', group: 'bss', groupName: 'Business & Social Sciences', canHL: true },
   { name: 'Global Politics', group: 'bss', groupName: 'Business & Social Sciences', canHL: true },
@@ -50,7 +51,7 @@ export const IB_SUBJECTS = [
 export const SUBJECT_GROUPS = [
   { id: 1, name: 'Language & Literature' },
   { id: 2, name: 'Language Acquisition' },
-  { id: 'bss', name: 'Business & Social Sciences (BSS)' },
+  { id: 'bss', name: 'Business & Social Sciences' },
   { id: 3, name: 'Individuals & Societies' },
   { id: 4, name: 'Sciences' },
   { id: 5, name: 'Mathematics' },
