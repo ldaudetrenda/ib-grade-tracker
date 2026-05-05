@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import { logEvent } from '../analytics';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip,
@@ -38,6 +39,7 @@ function QuarterCard({ quarter, grades, subjectId, dispatch, isTok = false }) {
       return;
     }
     dispatch({ type: 'ADD_GRADE', payload: { subjectId, quarter, grade: val } });
+    logEvent('grade_added');
     setInput('');
     setError('');
   }
@@ -45,6 +47,7 @@ function QuarterCard({ quarter, grades, subjectId, dispatch, isTok = false }) {
   // ── TOK: add letter grade via button ──
   function addTokGrade(letter) {
     dispatch({ type: 'ADD_TOK_GRADE', payload: { quarter, grade: letter } });
+    logEvent('grade_added');
   }
 
   function removeGrade(index) {
@@ -300,6 +303,7 @@ export default function SubjectDetail() {
     const val = parseInt(goalInput, 10);
     if (!isNaN(val) && val >= 1 && val <= 7) {
       dispatch({ type: 'SET_SUBJECT_GOAL', payload: { subjectId: id, goalGrade: val } });
+      logEvent('goal_set');
     }
     setEditGoal(false);
   }
@@ -363,7 +367,7 @@ export default function SubjectDetail() {
                   {TOK_GRADES.map(g => (
                     <button
                       key={g}
-                      onClick={() => dispatch({ type: 'SET_TOK_GOAL', payload: g })}
+                      onClick={() => { dispatch({ type: 'SET_TOK_GOAL', payload: g }); logEvent('goal_set'); }}
                       style={{
                         width: '2rem', height: '2rem', borderRadius: '50%',
                         border: subject.goalGrade === g ? `2px solid ${getTokColor(g)}` : '2px solid var(--border)',

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { BookOpen, ChevronRight, ChevronLeft, Check, Lock, User, Target } from 'lucide-react';
 import { useApp, IB_SUBJECTS, SUBJECT_GROUPS } from '../context/AppContext';
+import { logEvent } from '../analytics';
 
 const STEPS = ['Welcome', 'Choose Subjects', 'Subject Goals', 'Total Target'];
 
@@ -71,6 +72,7 @@ export default function Setup() {
   };
 
   function goNext() {
+    if (step === 0) logEvent('onboarding_completed');
     if (step === 1) {
       // Initialize per-subject goals: keep existing, fill blanks with smart defaults
       const defaults = {};
@@ -83,6 +85,7 @@ export default function Setup() {
   }
 
   function handleFinish() {
+    logEvent('setup_completed');
     const subjects = selected.map((s, i) => ({
       id: `subject_${i}_${Date.now()}`,
       name: s.name,

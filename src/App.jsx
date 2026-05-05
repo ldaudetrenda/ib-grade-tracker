@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Routes, Route, Link, useLocation, useNavigate } from 'react-router-dom';
 import { BookOpen, LayoutDashboard, Settings as SettingsIcon, Menu, X, Trophy, UserCircle, LogOut, Info, GraduationCap } from 'lucide-react';
 import { useApp, getTotalScore } from './context/AppContext';
+import { logEvent } from './analytics';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import Setup from './pages/Setup';
 import Dashboard from './pages/Dashboard';
@@ -145,6 +146,8 @@ function Navbar() {
 // ─── Inner App (needs AuthContext) ────────────────────────────────────────────
 function AppInner() {
   const { state } = useApp();
+
+  useEffect(() => { logEvent('app_opened'); }, []);
 
   if (!state.isSetupComplete) {
     return <Setup />;

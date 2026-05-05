@@ -1,5 +1,6 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { logEvent } from '../analytics';
 import { ArrowLeft, BookOpen, Target, BarChart2, Award } from 'lucide-react';
 
 function getSteps() {
@@ -74,6 +75,8 @@ export function HowItWorksSection() {
 export default function HowItWorksPage() {
   const navigate = useNavigate();
   const steps = getSteps();
+
+  useEffect(() => { logEvent('how_it_works_opened'); }, []);
   return (
     <div className="main-content container fade-in">
       <button className="btn btn-ghost btn-sm" style={{ marginBottom: '1.25rem' }} onClick={() => navigate('/')}>

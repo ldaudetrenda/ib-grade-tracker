@@ -1,10 +1,11 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   GraduationCap, Plus, Trash2, ArrowLeft, AlertTriangle,
   BookOpen, Save, X,
 } from 'lucide-react';
 import { useApp, getTotalScore, getPredictedGrade } from '../context/AppContext';
+import { logEvent } from '../analytics';
 
 // labelType: 'official' | 'estimate' | 'no-fixed'
 // target is used for status comparison (competitive estimate even for no-fixed)
@@ -271,6 +272,8 @@ export default function DreamUniversity() {
   const { state, dispatch } = useApp();
   const navigate = useNavigate();
   const [showAddForm, setShowAddForm] = useState(false);
+
+  useEffect(() => { logEvent('dream_university_opened'); }, []);
 
   const currentScore = getTotalScore(state.subjects, state.corePoints);
   const dreamUniversities = state.dreamUniversities || [];
