@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { HowItWorksSection } from './HowItWorksPage';
 import {
@@ -7,7 +7,175 @@ import {
   LineChart, Line, Cell,
   AreaChart, Area, ReferenceLine,
 } from 'recharts';
-import { TrendingUp, Award, Target, BookOpen, ChevronRight, ChevronLeft, Settings, Plus, X } from 'lucide-react';
+import { TrendingUp, Award, Target, BookOpen, ChevronRight, ChevronLeft, Settings, Plus, X, FileText, AlertTriangle, Check, Image } from 'lucide-react';
+import * as pdfjsLib from 'pdfjs-dist';
+import pdfjsWorkerSrc from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
+
+pdfjsLib.GlobalWorkerOptions.workerSrc = pdfjsWorkerSrc;
+
+// ─── OCR Helper ──────────────────────────────────────────────────────────────
+
+// Preprocess image: upscale, grayscale, contrast boost, sharpen — for better Tesseract accuracy
+async function preprocessImageForOCR(file) {
+  return new Promise((resolve) => {
+    const img = new window.Image();
+    const objectUrl = URL.createObjectURL(file);
+    img.onload = () => {
+      URL.revokeObjectURL(objectUrl);
+      try {
+        // Scale to at least 2000px wide (Tesseract works best at 300dpi+)
+        const scale = Math.max(2, 2000 / img.width);
+        const w = Math.round(img.width * scale);
+        const h = Math.round(img.height * scale);
+        const canvas = document.createElement('canvas');
+        canvas.width = w;
+        canvas.height = h;
+        const ctx = canvas.getContext('2d');
+        ctx.imageSmoothingEnabled = true;
+        ctx.imageSmoothingQuality = 'high';
+        ctx.drawImage(img, 0, 0, w, h);
+
+        // Grayscale + contrast boost
+        const imageData = ctx.getImageData(0, 0, w, h);
+        const data = imageData.data;
+        const cf = (259 * (50 + 255)) / (255 * (259 - 50)); // contrast factor
+        for (let i = 0; i < data.length; i += 4) {
+          const gray = 0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2];
+          const boosted = Math.max(0, Math.min(255, Math.round(cf * (gray - 128) + 128)));
+          data[i] = data[i + 1] = data[i + 2] = boosted;
+        }
+        ctx.putImageData(imageData, 0, 0);
+
+        // Sharpen with cross-shaped kernel [0,-1,0,-1,5,-1,0,-1,0]
+        const src = imageData.data.slice();
+        const sharp = ctx.getImageData(0, 0, w, h);
+        const dst = sharp.data;
+        for (let y = 1; y < h - 1; y++) {
+          for (let x = 1; x < w - 1; x++) {
+            const c = (y * w + x) * 4;
+            const v = Math.max(0, Math.min(255,
+              5 * src[c] - src[((y - 1) * w + x) * 4] - src[((y + 1) * w + x) * 4]
+              - src[(y * w + x - 1) * 4] - src[(y * w + x + 1) * 4]
+            ));
+            dst[c] = dst[c + 1] = dst[c + 2] = v;
+            dst[c + 3] = 255;
+          }
+        }
+        ctx.putImageData(sharp, 0, 0);
+        canvas.toBlob(blob => resolve(blob || file), 'image/png');
+      } catch {
+        resolve(file); // fallback to original on any error
+      }
+    };
+    img.onerror = () => resolve(file);
+    img.src = objectUrl;
+  });
+}
+
+async function ocrImage(file) {
+  const processedBlob = await preprocessImageForOCR(file);
+  const { createWorker } = await import('tesseract.js');
+  const worker = await createWorker('eng');
+  try {
+    const { data: { text } } = await worker.recognize(processedBlob);
+    return text;
+  } finally {
+    await worker.terminate();
+  }
+}
+
+// ─── PDF Extraction Helpers ───────────────────────────────────────────────────
+async function extractPdfText(file) {
+  const buf = await file.arrayBuffer();
+  const pdf = await pdfjsLib.getDocument({ data: buf }).promise;
+  const pages = [];
+  for (let i = 1; i <= pdf.numPages; i++) {
+    const page = await pdf.getPage(i);
+    const content = await page.getTextContent();
+    const lineMap = {};
+    content.items.forEach(item => {
+      const y = Math.round(item.transform[5]);
+      if (!lineMap[y]) lineMap[y] = [];
+      lineMap[y].push(item.str);
+    });
+    const sortedY = Object.keys(lineMap).map(Number).sort((a, b) => b - a);
+    pages.push(sortedY.map(y => lineMap[y].join(' ')).join('\n'));
+  }
+  return pages.join('\n');
+}
+
+function parsePdfForHistory(text, subjects) {
+  const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
+  const stop = new Set(['a', 'an', 'the', 'and', 'of', 'in', 'to', 'for', 'or', 'is', 'at', 'by', 'with', 'ib']);
+
+  // Detect quarter/term label — try multiple patterns
+  const qPatterns = [
+    /\b(Q\s*[1-4])\b/i,
+    /\b(Quarter\s*[1-4])\b/i,
+    /\b(Term\s*[1-4])\b/i,
+    /\b(Semester\s*[1-2])\b/i,
+    /\b(S\s*[1-2])\b/,
+  ];
+  let label = '';
+  for (const re of qPatterns) {
+    const m = text.match(re);
+    if (m) {
+      // Normalize: "Quarter3" → "Quarter 3"; preserve "Q3" as-is
+      label = m[1]
+        .replace(/\s+/g, ' ')
+        .replace(/^(Quarter|Term|Semester)(\d)/i, '$1 $2')
+        .trim();
+      break;
+    }
+  }
+
+  // For each subject, find the BEST matching line then search nearby for a grade 1-7
+  const grades = subjects.map(subject => {
+    const words = subject.name.toLowerCase()
+      .split(/[\s:&\-/()\[\],.']+/)
+      .filter(w => w.length > 2 && !stop.has(w));
+    if (words.length === 0) return '';
+
+    // Lower threshold: 30% of significant words must match (more lenient for OCR noise)
+    const threshold = Math.max(1, Math.ceil(words.length * 0.3));
+
+    // Find the line with the most keyword hits (best match, not just first match)
+    let bestIdx = -1;
+    let bestHits = 0;
+    for (let i = 0; i < lines.length; i++) {
+      const ll = lines[i].toLowerCase();
+      const hits = words.filter(w => ll.includes(w)).length;
+      if (hits >= threshold && hits > bestHits) {
+        bestIdx = i;
+        bestHits = hits;
+      }
+    }
+    if (bestIdx < 0) return '';
+
+    const i = bestIdx;
+
+    // Strategy 1: last number 1-7 on the same line (usually the final/predicted grade)
+    const sameLineNums = lines[i].match(/\b([1-7])\b/g);
+    if (sameLineNums) return sameLineNums[sameLineNums.length - 1];
+
+    // Strategy 2: scan next 8 lines one-by-one, return last grade found per line
+    for (let j = i + 1; j < Math.min(lines.length, i + 9); j++) {
+      const nums = lines[j].match(/\b([1-7])\b/g);
+      if (nums) return nums[nums.length - 1];
+    }
+
+    // Strategy 3: scan up to 4 lines before
+    for (let j = i - 1; j >= Math.max(0, i - 4); j--) {
+      const nums = lines[j].match(/\b([1-7])\b/g);
+      if (nums) return nums[nums.length - 1];
+    }
+
+    return '';
+  });
+
+  const detected = grades.filter(Boolean).length;
+  return { label, grades, detected };
+}
 import {
   useApp,
   getPredictedGrade,
@@ -309,6 +477,156 @@ function ProgressHistorySection({ history, subjects, dispatch }) {
   const [editLabel, setEditLabel] = useState('');
   const [editGrades, setEditGrades] = useState(EMPTY_GRADES);
 
+  // ── PDF Import state ──
+  const [importPhase, setImportPhase] = useState(null); // null | 'upload' | 'processing' | 'review'
+  const [importError, setImportError] = useState(null);
+  const [importLabel, setImportLabel] = useState('');
+  const [importGrades, setImportGrades] = useState(EMPTY_GRADES);
+  const [importDragOver, setImportDragOver] = useState(false);
+  const [importRawText, setImportRawText] = useState('');
+  const [importIsImageBased, setImportIsImageBased] = useState(false);
+  const [importDetected, setImportDetected] = useState(0);
+  const [showTextPreview, setShowTextPreview] = useState(false);
+  const [importExtractionFailed, setImportExtractionFailed] = useState(false);
+  const [importPasteText, setImportPasteText] = useState('');
+  const [showPasteInput, setShowPasteInput] = useState(false);
+  const importFileRef = useRef(null);
+
+  // ── Screenshot Import state ──
+  const [screenshotPhase, setScreenshotPhase] = useState(null); // null | 'upload' | 'processing' | 'review'
+  const [screenshotError, setScreenshotError] = useState(null);
+  const [screenshotDragOver, setScreenshotDragOver] = useState(false);
+  const [screenshotLabel, setScreenshotLabel] = useState('');
+  const [screenshotGrades, setScreenshotGrades] = useState(EMPTY_GRADES);
+  const [screenshotDetected, setScreenshotDetected] = useState(0);
+  const [screenshotRawText, setScreenshotRawText] = useState('');
+  const [showScreenshotText, setShowScreenshotText] = useState(false);
+  const screenshotFileRef = useRef(null);
+
+  async function handleImportFile(file) {
+    if (!file || file.type !== 'application/pdf') {
+      setImportError('Please upload a PDF file (.pdf).');
+      return;
+    }
+    setImportError(null);
+    setImportPhase('processing');
+    try {
+      const text = await extractPdfText(file);
+      setImportRawText(text);
+      setShowTextPreview(false);
+
+      if (!text.trim()) {
+        // Image-based / scanned PDF — go to review with empty grades
+        setImportIsImageBased(true);
+        setImportLabel('');
+        setImportDetected(0);
+        setImportGrades(Array(subjects.length).fill(''));
+        setImportPhase('review');
+        return;
+      }
+
+      setImportIsImageBased(false);
+      setImportExtractionFailed(false);
+      const { label, grades, detected } = parsePdfForHistory(text, subjects);
+      setImportLabel(label);
+      setImportDetected(detected);
+      setImportGrades(grades.length === subjects.length ? grades : Array(subjects.length).fill(''));
+      setImportPhase('review');
+    } catch (err) {
+      // Don't block the user — go to review with empty grades and show diagnostic info
+      setImportExtractionFailed(true);
+      setImportIsImageBased(false);
+      setImportRawText('');
+      setImportLabel('');
+      setImportDetected(0);
+      setImportGrades(Array(subjects.length).fill(''));
+      setShowPasteInput(true);
+      setImportPhase('review');
+    }
+  }
+
+  function handlePasteDetect() {
+    if (!importPasteText.trim()) return;
+    const { label, grades, detected } = parsePdfForHistory(importPasteText, subjects);
+    if (label) setImportLabel(label);
+    setImportDetected(detected);
+    setImportGrades(grades.length === subjects.length ? grades : Array(subjects.length).fill(''));
+    setImportRawText(importPasteText);
+    setImportIsImageBased(false);
+    setImportExtractionFailed(false);
+    setImportPhase('review');
+  }
+
+  async function handleScreenshotFile(file) {
+    const validTypes = ['image/png', 'image/jpeg', 'image/jpg'];
+    if (!file || !validTypes.includes(file.type)) {
+      setScreenshotError('Please upload a PNG or JPG image.');
+      return;
+    }
+    setScreenshotError(null);
+    setScreenshotPhase('processing');
+    try {
+      const text = await ocrImage(file);
+      setScreenshotRawText(text);
+      setShowScreenshotText(false);
+      if (!text.trim()) {
+        setScreenshotError('We could not read this screenshot clearly. Please try another image or use Paste Text / Manual Entry.');
+        setScreenshotDetected(0);
+        setScreenshotGrades(Array(subjects.length).fill(''));
+        setScreenshotPhase('review');
+        return;
+      }
+      const { label, grades, detected } = parsePdfForHistory(text, subjects);
+      setScreenshotLabel(label);
+      setScreenshotDetected(detected);
+      setScreenshotGrades(grades.length === subjects.length ? grades : Array(subjects.length).fill(''));
+      setScreenshotPhase('review');
+    } catch (err) {
+      setScreenshotError('We could not read this screenshot clearly. Please try another image or use Paste Text / Manual Entry.');
+      setScreenshotDetected(0);
+      setScreenshotGrades(Array(subjects.length).fill(''));
+      setScreenshotRawText('');
+      setScreenshotPhase('review');
+    }
+  }
+
+  function cancelScreenshot() {
+    setScreenshotPhase(null);
+    setScreenshotError(null);
+    setScreenshotLabel('');
+    setScreenshotGrades(EMPTY_GRADES);
+    setScreenshotRawText('');
+    setScreenshotDetected(0);
+    setShowScreenshotText(false);
+    setScreenshotDragOver(false);
+  }
+
+  function saveScreenshot() {
+    if (!screenshotLabel.trim()) return;
+    dispatch({ type: 'ADD_PROGRESS_ENTRY', payload: { label: screenshotLabel.trim(), grades: screenshotGrades } });
+    cancelScreenshot();
+  }
+
+  function cancelImport() {
+    setImportPhase(null);
+    setImportError(null);
+    setImportLabel('');
+    setImportGrades(EMPTY_GRADES);
+    setImportRawText('');
+    setImportIsImageBased(false);
+    setImportDetected(0);
+    setShowTextPreview(false);
+    setImportExtractionFailed(false);
+    setImportPasteText('');
+    setShowPasteInput(false);
+  }
+
+  function saveImport() {
+    if (!importLabel.trim()) return;
+    dispatch({ type: 'ADD_PROGRESS_ENTRY', payload: { label: importLabel.trim(), grades: importGrades } });
+    cancelImport();
+  }
+
   const chartData = history.map(e => ({
     label: e.label,
     total: computeHistoryTotal(e.grades),
@@ -370,12 +688,409 @@ function ProgressHistorySection({ history, subjects, dispatch }) {
     <div style={{ marginBottom: '1.5rem' }}>
       <div className="section-header" style={{ marginBottom: '1rem' }}>
         <h2>IB Progress History</h2>
-        {!addingNew && (
-          <button className="btn btn-primary btn-sm" onClick={startAdd}>
-            <Plus size={13} /> Add Quarter
-          </button>
+        {!addingNew && !importPhase && !screenshotPhase && (
+          <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+            <button className="btn btn-primary btn-sm" onClick={startAdd}>
+              <Plus size={13} /> Add Manually
+            </button>
+            <button className="btn btn-ghost btn-sm" onClick={() => { setImportPasteText(''); setImportPhase('paste'); }}>
+              <FileText size={13} /> Paste Text
+            </button>
+            <button className="btn btn-ghost btn-sm" onClick={() => setScreenshotPhase('upload')}>
+              <Image size={13} /> Import Screenshot
+            </button>
+          </div>
         )}
       </div>
+
+      {/* ── PDF Import Panel ── */}
+      {importPhase === 'paste' && (
+        <div className="card" style={{ marginBottom: '1.5rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
+            <h3 style={{ margin: 0 }}>Import by Pasting Text</h3>
+            <button className="btn btn-ghost btn-sm" onClick={cancelImport}><X size={14} /></button>
+          </div>
+          <p style={{ fontSize: '0.82rem', color: 'var(--text-muted)', marginBottom: '0.75rem' }}>
+            Open your report card in a PDF viewer or browser, select all text (Ctrl+A / Cmd+A), copy, and paste below.
+          </p>
+          <textarea
+            value={importPasteText}
+            onChange={e => setImportPasteText(e.target.value)}
+            placeholder="Paste your report card text here…"
+            rows={8}
+            autoFocus
+            style={{
+              width: '100%', fontFamily: 'monospace', fontSize: '0.78rem',
+              border: '1.5px solid var(--border)', borderRadius: 'var(--radius-sm)',
+              padding: '0.625rem', resize: 'vertical', boxSizing: 'border-box',
+              color: 'var(--text)', background: 'var(--bg)', marginBottom: '0.75rem',
+            }}
+          />
+          <div style={{ display: 'flex', gap: '0.625rem' }}>
+            <button className="btn btn-primary btn-sm" onClick={handlePasteDetect} disabled={!importPasteText.trim()}>
+              Detect Grades
+            </button>
+            <button className="btn btn-ghost btn-sm" onClick={cancelImport}>Cancel</button>
+          </div>
+        </div>
+      )}
+
+      {importPhase === 'processing' && (
+        <div className="card" style={{ marginBottom: '1.5rem', textAlign: 'center', padding: '2rem' }}>
+          <div style={{ width: '36px', height: '36px', border: '3px solid var(--border)', borderTop: '3px solid var(--primary)', borderRadius: '50%', animation: 'spin 1s linear infinite', margin: '0 auto 1rem' }} />
+          <p style={{ fontWeight: 600, marginBottom: '0.25rem' }}>Reading your PDF…</p>
+          <p style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>Extracting text and detecting grades</p>
+          <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+        </div>
+      )}
+
+      {importPhase === 'review' && (
+        <div className="card" style={{ marginBottom: '1.5rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
+            <h3 style={{ margin: 0 }}>Review Imported Grades</h3>
+            <button className="btn btn-ghost btn-sm" onClick={cancelImport}><X size={14} /></button>
+          </div>
+
+          {/* Extraction failed warning */}
+          {importExtractionFailed && (
+            <div style={{ background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: 'var(--radius-sm)', padding: '0.75rem 1rem', marginBottom: '1rem', display: 'flex', gap: '0.5rem', alignItems: 'flex-start' }}>
+              <AlertTriangle size={14} color="var(--danger)" style={{ flexShrink: 0, marginTop: '0.1rem' }} />
+              <p style={{ fontSize: '0.82rem', color: 'var(--danger)', margin: 0 }}>
+                <strong>Could not read this PDF automatically.</strong> It may be password-protected, image-based, or in an unsupported format. Use the paste box below to enter grades manually, or upload a different file.
+              </p>
+            </div>
+          )}
+
+          {/* Image-based PDF warning */}
+          {importIsImageBased && (
+            <div style={{ background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: 'var(--radius-sm)', padding: '0.75rem 1rem', marginBottom: '1rem', display: 'flex', gap: '0.5rem', alignItems: 'flex-start' }}>
+              <AlertTriangle size={14} color="var(--danger)" style={{ flexShrink: 0, marginTop: '0.1rem' }} />
+              <p style={{ fontSize: '0.82rem', color: 'var(--danger)', margin: 0 }}>
+                <strong>This PDF appears to be image-based or scanned.</strong> Text extraction did not find any content. Please enter grades manually below, or upload a text-based PDF.
+              </p>
+            </div>
+          )}
+
+          {/* Detection summary */}
+          {!importIsImageBased && (
+            <div style={{ background: importDetected > 0 ? '#F0FDF4' : '#FFFBEB', border: `1px solid ${importDetected > 0 ? '#BBF7D0' : '#FDE68A'}`, borderRadius: 'var(--radius-sm)', padding: '0.75rem 1rem', marginBottom: '1rem', display: 'flex', gap: '0.5rem', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap' }}>
+              <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'flex-start' }}>
+                <AlertTriangle size={14} color={importDetected > 0 ? '#16A34A' : '#D97706'} style={{ flexShrink: 0, marginTop: '0.1rem' }} />
+                <p style={{ fontSize: '0.82rem', color: importDetected > 0 ? '#166534' : '#92400E', margin: 0 }}>
+                  {importDetected > 0
+                    ? <><strong>{importDetected} of {subjects.length} subject grade{importDetected !== 1 ? 's' : ''} detected.</strong> Review and fill in any missing ones.</>
+                    : <><strong>No grades were automatically detected.</strong> The PDF text was extracted but no matching grades were found. Enter them manually below.</>
+                  }
+                </p>
+              </div>
+              <button
+                onClick={() => setShowTextPreview(p => !p)}
+                style={{ fontSize: '0.75rem', color: 'var(--primary)', background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline', whiteSpace: 'nowrap' }}
+              >
+                {showTextPreview ? 'Hide extracted text' : 'Show extracted text'}
+              </button>
+            </div>
+          )}
+
+          {/* Always-warn */}
+          {!importIsImageBased && (
+            <div style={{ background: '#FFFBEB', border: '1px solid #FDE68A', borderRadius: 'var(--radius-sm)', padding: '0.625rem 1rem', marginBottom: '1rem', display: 'flex', gap: '0.5rem' }}>
+              <AlertTriangle size={13} color="#D97706" style={{ flexShrink: 0, marginTop: '0.1rem' }} />
+              <p style={{ fontSize: '0.78rem', color: '#92400E', margin: 0 }}>
+                <strong>Imported grades may not be perfect.</strong> Review each grade before confirming.
+              </p>
+            </div>
+          )}
+
+          {/* Extracted text preview */}
+          {showTextPreview && importRawText && (
+            <div style={{ marginBottom: '1rem' }}>
+              <p style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '0.375rem' }}>Extracted Text</p>
+              <pre style={{
+                background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)',
+                padding: '0.75rem', fontSize: '0.72rem', color: 'var(--text-muted)', whiteSpace: 'pre-wrap',
+                wordBreak: 'break-word', maxHeight: '200px', overflowY: 'auto', fontFamily: 'monospace',
+                lineHeight: 1.5,
+              }}>{importRawText.slice(0, 3000)}{importRawText.length > 3000 ? '\n\n[… truncated]' : ''}</pre>
+            </div>
+          )}
+
+          {/* Quarter label */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1.25rem', flexWrap: 'wrap' }}>
+            <label style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Quarter</label>
+            {['Q1', 'Q2', 'Q3', 'Q4'].map(q => (
+              <button key={q} onClick={() => setImportLabel(q)}
+                style={{
+                  padding: '0.3rem 0.875rem', borderRadius: '100px', fontWeight: 700, fontSize: '0.82rem',
+                  border: importLabel === q ? '2px solid var(--primary)' : '2px solid var(--border)',
+                  background: importLabel === q ? 'var(--primary)' : 'white',
+                  color: importLabel === q ? 'white' : 'var(--text-muted)', cursor: 'pointer',
+                }}
+              >{q}</button>
+            ))}
+            <input
+              value={importLabel}
+              onChange={e => setImportLabel(e.target.value)}
+              placeholder="Custom label…"
+              style={{ ...gradeInputStyle, width: '8rem', borderColor: importLabel ? 'var(--primary)' : 'var(--border)' }}
+            />
+          </div>
+
+          {/* Per-subject grades */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginBottom: '1.25rem' }}>
+            {subjects.map((s, i) => (
+              <div key={s.id} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.5rem 0.75rem', background: 'var(--bg)', borderRadius: 'var(--radius-sm)', flexWrap: 'wrap' }}>
+                <span className={`badge ${s.level === 'HL' ? 'badge-hl' : 'badge-sl'}`}>{s.level}</span>
+                <span style={{ flex: 1, fontWeight: 500, fontSize: '0.875rem', minWidth: '120px' }}>{s.name}</span>
+                <div style={{ display: 'flex', gap: '0.25rem' }}>
+                  {[1, 2, 3, 4, 5, 6, 7].map(g => (
+                    <button key={g} onClick={() => {
+                      const next = [...importGrades];
+                      next[i] = String(g);
+                      setImportGrades(next);
+                    }}
+                      style={{
+                        width: '2rem', height: '2rem', borderRadius: '50%', fontWeight: 700, fontSize: '0.78rem',
+                        border: importGrades[i] === String(g) ? '2px solid var(--primary)' : '2px solid var(--border)',
+                        background: importGrades[i] === String(g) ? 'var(--primary)' : 'white',
+                        color: importGrades[i] === String(g) ? 'white' : 'var(--text-muted)', cursor: 'pointer',
+                      }}
+                    >{g}</button>
+                  ))}
+                  <button onClick={() => { const next = [...importGrades]; next[i] = ''; setImportGrades(next); }}
+                    title="Clear" style={{ width: '2rem', height: '2rem', borderRadius: '50%', border: '1.5px solid var(--border)', background: 'none', cursor: 'pointer', color: 'var(--text-light)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <X size={10} />
+                  </button>
+                </div>
+                <span style={{ fontSize: '0.8rem', fontWeight: 700, minWidth: '1.5rem', textAlign: 'center', color: importGrades[i] ? 'var(--primary)' : 'var(--text-light)' }}>
+                  {importGrades[i] || '–'}
+                </span>
+              </div>
+            ))}
+          </div>
+
+          {/* Total */}
+          <div style={{ padding: '0.625rem 0.75rem', background: 'var(--primary-light)', borderRadius: 'var(--radius-sm)', marginBottom: '1.25rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--primary-dark)' }}>Calculated Total</span>
+            <span style={{ fontWeight: 800, fontSize: '1rem', color: 'var(--primary)' }}>
+              {computeHistoryTotal(importGrades)} / 42
+            </span>
+          </div>
+
+          <div style={{ display: 'flex', gap: '0.625rem' }}>
+            <button className="btn btn-primary btn-sm" onClick={saveImport} disabled={!importLabel.trim()}>
+              <Check size={13} /> Confirm Import
+            </button>
+            <button className="btn btn-ghost btn-sm" onClick={() => { setImportPasteText(''); setImportPhase('paste'); }}>
+              Try Again
+            </button>
+            <button className="btn btn-ghost btn-sm" onClick={cancelImport}>
+              Cancel
+            </button>
+          </div>
+          {!importLabel.trim() && (
+            <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: '0.5rem' }}>Select a quarter label to enable confirm.</p>
+          )}
+        </div>
+      )}
+
+      {/* ── Screenshot Import Panels ── */}
+      {screenshotPhase === 'upload' && (
+        <div className="card" style={{ marginBottom: '1.5rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <h3 style={{ margin: 0 }}>Import Screenshot</h3>
+              <span style={{ fontSize: '0.65rem', fontWeight: 700, background: '#EDE9FE', color: '#7C3AED', borderRadius: 4, padding: '0.15rem 0.4rem' }}>BETA</span>
+            </div>
+            <button className="btn btn-ghost btn-sm" onClick={cancelScreenshot}><X size={14} /></button>
+          </div>
+          <p style={{ fontSize: '0.82rem', color: 'var(--text-muted)', marginBottom: '0.875rem' }}>
+            Upload a screenshot of your report card to detect grades automatically. OCR results may not be perfect — always review before saving.
+          </p>
+
+          {screenshotError && (
+            <div style={{ background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: 'var(--radius-sm)', padding: '0.75rem 1rem', marginBottom: '1rem', display: 'flex', gap: '0.5rem', alignItems: 'flex-start' }}>
+              <AlertTriangle size={14} color="var(--danger)" style={{ flexShrink: 0, marginTop: '0.1rem' }} />
+              <p style={{ fontSize: '0.82rem', color: 'var(--danger)', margin: 0 }}>{screenshotError}</p>
+            </div>
+          )}
+
+          <input ref={screenshotFileRef} type="file" accept="image/png,image/jpeg,image/jpg" style={{ display: 'none' }}
+            onChange={e => handleScreenshotFile(e.target.files[0])} />
+
+          <div
+            onDragOver={e => { e.preventDefault(); setScreenshotDragOver(true); }}
+            onDragLeave={() => setScreenshotDragOver(false)}
+            onDrop={e => { e.preventDefault(); setScreenshotDragOver(false); handleScreenshotFile(e.dataTransfer.files[0]); }}
+            onClick={() => screenshotFileRef.current?.click()}
+            style={{
+              border: `2px dashed ${screenshotDragOver ? 'var(--primary)' : 'var(--border)'}`,
+              borderRadius: 'var(--radius-sm)', padding: '2rem', textAlign: 'center',
+              cursor: 'pointer', background: screenshotDragOver ? 'var(--primary-light)' : 'var(--bg)',
+              transition: 'all 0.15s', marginBottom: '0.875rem',
+            }}
+          >
+            <Image size={32} color={screenshotDragOver ? 'var(--primary)' : 'var(--text-light)'} style={{ marginBottom: '0.75rem' }} />
+            <p style={{ fontWeight: 600, marginBottom: '0.25rem', color: screenshotDragOver ? 'var(--primary)' : 'var(--text)' }}>
+              Drop screenshot here, or click to browse
+            </p>
+            <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>PNG, JPG, JPEG accepted</p>
+          </div>
+
+          <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'flex-start', marginTop: '0.25rem' }}>
+            <AlertTriangle size={13} color="#D97706" style={{ flexShrink: 0, marginTop: '0.1rem' }} />
+            <p style={{ fontSize: '0.78rem', color: '#92400E', margin: 0 }}>
+              <strong>Screenshot import is in beta.</strong> For best results, upload a clear, zoomed-in screenshot of the grade table. Image is processed locally — never uploaded or stored.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {screenshotPhase === 'processing' && (
+        <div className="card" style={{ marginBottom: '1.5rem', textAlign: 'center', padding: '2rem' }}>
+          <div style={{ width: '36px', height: '36px', border: '3px solid var(--border)', borderTop: '3px solid var(--primary)', borderRadius: '50%', animation: 'spin 1s linear infinite', margin: '0 auto 1rem' }} />
+          <p style={{ fontWeight: 600, marginBottom: '0.25rem' }}>Reading screenshot…</p>
+          <p style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>Running OCR — this may take a few seconds</p>
+          <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+        </div>
+      )}
+
+      {screenshotPhase === 'review' && (
+        <div className="card" style={{ marginBottom: '1.5rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <h3 style={{ margin: 0 }}>Review Screenshot Grades</h3>
+              <span style={{ fontSize: '0.65rem', fontWeight: 700, background: '#EDE9FE', color: '#7C3AED', borderRadius: 4, padding: '0.15rem 0.4rem' }}>BETA</span>
+            </div>
+            <button className="btn btn-ghost btn-sm" onClick={cancelScreenshot}><X size={14} /></button>
+          </div>
+
+          {screenshotError && (
+            <div style={{ background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: 'var(--radius-sm)', padding: '0.75rem 1rem', marginBottom: '1rem', display: 'flex', gap: '0.5rem', alignItems: 'flex-start' }}>
+              <AlertTriangle size={14} color="var(--danger)" style={{ flexShrink: 0, marginTop: '0.1rem' }} />
+              <p style={{ fontSize: '0.82rem', color: 'var(--danger)', margin: 0 }}>{screenshotError}</p>
+            </div>
+          )}
+
+          {!screenshotError && (
+            <div style={{ background: screenshotDetected > 0 ? '#F0FDF4' : '#FFFBEB', border: `1px solid ${screenshotDetected > 0 ? '#BBF7D0' : '#FDE68A'}`, borderRadius: 'var(--radius-sm)', padding: '0.75rem 1rem', marginBottom: '1rem', display: 'flex', gap: '0.5rem', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap' }}>
+              <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'flex-start' }}>
+                <AlertTriangle size={14} color={screenshotDetected > 0 ? '#16A34A' : '#D97706'} style={{ flexShrink: 0, marginTop: '0.1rem' }} />
+                <p style={{ fontSize: '0.82rem', color: screenshotDetected > 0 ? '#166534' : '#92400E', margin: 0 }}>
+                  {screenshotDetected > 0
+                    ? <><strong>{screenshotDetected} of {subjects.length} grades detected.</strong> Review and fill in any missing ones.</>
+                    : <><strong>No grades were automatically detected.</strong> Enter them manually below.</>
+                  }
+                </p>
+              </div>
+              {screenshotRawText && (
+                <button onClick={() => setShowScreenshotText(p => !p)}
+                  style={{ fontSize: '0.75rem', color: 'var(--primary)', background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline', whiteSpace: 'nowrap' }}>
+                  {showScreenshotText ? 'Hide OCR text' : 'Show OCR text'}
+                </button>
+              )}
+            </div>
+          )}
+
+          <div style={{ background: '#FFFBEB', border: '1px solid #FDE68A', borderRadius: 'var(--radius-sm)', padding: '0.625rem 1rem', marginBottom: '1rem', display: 'flex', gap: '0.5rem' }}>
+            <AlertTriangle size={13} color="#D97706" style={{ flexShrink: 0, marginTop: '0.1rem' }} />
+            <p style={{ fontSize: '0.78rem', color: '#92400E', margin: 0 }}>
+              <strong>OCR-detected grades may not be accurate.</strong> Review every grade carefully before confirming.
+            </p>
+          </div>
+
+          {showScreenshotText && screenshotRawText && (
+            <div style={{ marginBottom: '1rem' }}>
+              <p style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '0.375rem' }}>OCR Text</p>
+              <pre style={{
+                background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)',
+                padding: '0.75rem', fontSize: '0.72rem', color: 'var(--text-muted)', whiteSpace: 'pre-wrap',
+                wordBreak: 'break-word', maxHeight: '200px', overflowY: 'auto', fontFamily: 'monospace', lineHeight: 1.5,
+              }}>{screenshotRawText.slice(0, 3000)}{screenshotRawText.length > 3000 ? '\n\n[… truncated]' : ''}</pre>
+            </div>
+          )}
+
+          {/* Quarter label */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1.25rem', flexWrap: 'wrap' }}>
+            <label style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Quarter</label>
+            {['Q1', 'Q2', 'Q3', 'Q4'].map(q => (
+              <button key={q} onClick={() => setScreenshotLabel(q)}
+                style={{
+                  padding: '0.3rem 0.875rem', borderRadius: '100px', fontWeight: 700, fontSize: '0.82rem',
+                  border: screenshotLabel === q ? '2px solid var(--primary)' : '2px solid var(--border)',
+                  background: screenshotLabel === q ? 'var(--primary)' : 'white',
+                  color: screenshotLabel === q ? 'white' : 'var(--text-muted)', cursor: 'pointer',
+                }}
+              >{q}</button>
+            ))}
+            <input
+              value={screenshotLabel}
+              onChange={e => setScreenshotLabel(e.target.value)}
+              placeholder="Custom label…"
+              style={{ width: '8rem', padding: '0.2rem 0.25rem', border: `1.5px solid ${screenshotLabel ? 'var(--primary)' : 'var(--border)'}`, borderRadius: 6, fontSize: '0.85rem', textAlign: 'center', fontFamily: 'inherit', fontWeight: 700 }}
+            />
+          </div>
+
+          {/* Per-subject grades */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginBottom: '1.25rem' }}>
+            {subjects.map((s, i) => (
+              <div key={s.id} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.5rem 0.75rem', background: screenshotGrades[i] ? 'var(--bg)' : '#FFFBEB', border: `1px solid ${screenshotGrades[i] ? 'transparent' : '#FDE68A'}`, borderRadius: 'var(--radius-sm)', flexWrap: 'wrap' }}>
+                <span className={`badge ${s.level === 'HL' ? 'badge-hl' : 'badge-sl'}`}>{s.level}</span>
+                <span style={{ flex: 1, fontWeight: 500, fontSize: '0.875rem', minWidth: '120px' }}>{s.name}</span>
+                {!screenshotGrades[i] && (
+                  <span style={{ fontSize: '0.62rem', fontWeight: 700, background: '#FEF3C7', color: '#92400E', borderRadius: 4, padding: '0.1rem 0.35rem', whiteSpace: 'nowrap' }}>Needs review</span>
+                )}
+                <div style={{ display: 'flex', gap: '0.25rem' }}>
+                  {[1, 2, 3, 4, 5, 6, 7].map(g => (
+                    <button key={g} onClick={() => {
+                      const next = [...screenshotGrades];
+                      next[i] = String(g);
+                      setScreenshotGrades(next);
+                    }}
+                      style={{
+                        width: '2rem', height: '2rem', borderRadius: '50%', fontWeight: 700, fontSize: '0.78rem',
+                        border: screenshotGrades[i] === String(g) ? '2px solid var(--primary)' : '2px solid var(--border)',
+                        background: screenshotGrades[i] === String(g) ? 'var(--primary)' : 'white',
+                        color: screenshotGrades[i] === String(g) ? 'white' : 'var(--text-muted)', cursor: 'pointer',
+                      }}
+                    >{g}</button>
+                  ))}
+                  <button onClick={() => { const next = [...screenshotGrades]; next[i] = ''; setScreenshotGrades(next); }}
+                    title="Clear" style={{ width: '2rem', height: '2rem', borderRadius: '50%', border: '1.5px solid var(--border)', background: 'none', cursor: 'pointer', color: 'var(--text-light)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <X size={10} />
+                  </button>
+                </div>
+                <span style={{ fontSize: '0.8rem', fontWeight: 700, minWidth: '1.5rem', textAlign: 'center', color: screenshotGrades[i] ? 'var(--primary)' : 'var(--text-light)' }}>
+                  {screenshotGrades[i] || '–'}
+                </span>
+              </div>
+            ))}
+          </div>
+
+          {/* Total */}
+          <div style={{ padding: '0.625rem 0.75rem', background: 'var(--primary-light)', borderRadius: 'var(--radius-sm)', marginBottom: '1.25rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--primary-dark)' }}>Calculated Total</span>
+            <span style={{ fontWeight: 800, fontSize: '1rem', color: 'var(--primary)' }}>
+              {computeHistoryTotal(screenshotGrades)} / 42
+            </span>
+          </div>
+
+          <div style={{ display: 'flex', gap: '0.625rem' }}>
+            <button className="btn btn-primary btn-sm" onClick={saveScreenshot} disabled={!screenshotLabel.trim()}>
+              <Check size={13} /> Confirm Import
+            </button>
+            <button className="btn btn-ghost btn-sm" onClick={() => setScreenshotPhase('upload')}>
+              Upload Different Image
+            </button>
+            <button className="btn btn-ghost btn-sm" onClick={cancelScreenshot}>
+              Cancel
+            </button>
+          </div>
+          {!screenshotLabel.trim() && (
+            <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: '0.5rem' }}>Select a quarter label to enable confirm.</p>
+          )}
+        </div>
+      )}
 
       {/* Progress chart */}
       {chartData.length > 0 && (() => {

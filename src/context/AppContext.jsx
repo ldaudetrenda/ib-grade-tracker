@@ -189,6 +189,19 @@ function reducer(state, action) {
     case 'RESET_SETUP':
       return { ...initialState };
 
+    case 'IMPORT_GRADES': {
+      // payload: Array of { subjectId, quarter, grade }
+      let subjects = state.subjects;
+      for (const { subjectId, quarter, grade } of action.payload) {
+        subjects = subjects.map(s => {
+          if (s.id !== subjectId) return s;
+          const existing = s.quarters[quarter] || [];
+          return { ...s, quarters: { ...s.quarters, [quarter]: [...existing, grade] } };
+        });
+      }
+      return { ...state, subjects };
+    }
+
     case 'UPDATE_PROFILE':
       return {
         ...state,

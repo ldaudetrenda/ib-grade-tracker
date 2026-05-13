@@ -13,6 +13,7 @@ import LoginPage from './pages/LoginPage';
 import SignupPage from './pages/SignupPage';
 import HowItWorksPage from './pages/HowItWorksPage';
 import DreamUniversity from './pages/DreamUniversity';
+import ImportPDF from './pages/ImportPDF';
 
 // ─── Navbar ───────────────────────────────────────────────────────────────────
 function Navbar() {
@@ -162,6 +163,7 @@ function AppInner() {
         <Route path="/tok" element={<SubjectDetail />} />
         <Route path="/settings" element={<Settings />} />
         <Route path="/setup/edit" element={<Setup editMode />} />
+        <Route path="/import" element={<ImportPDF />} />
         <Route path="/rooms" element={<Rooms />} />
         <Route path="/dream-university" element={<DreamUniversity />} />
         <Route path="/how-it-works" element={<HowItWorksPage />} />
