@@ -1388,6 +1388,9 @@ export default function Dashboard() {
             <p style={{ color: 'var(--text-muted)', fontSize: '0.95rem' }}>
               Here's your IB progress overview
             </p>
+            <p style={{ color: 'var(--text-light)', fontSize: '0.78rem', marginTop: '0.25rem', maxWidth: '520px' }}>
+              IB Grade Tracker helps IB students track grades, predicted scores, subject goals, core points, progress graphs, and university targets.
+            </p>
           </div>
           <Link to="/settings" style={{ textDecoration: 'none' }}>
             <button className="btn btn-ghost btn-sm">
