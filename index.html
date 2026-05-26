@@ -3,6 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="shortcut icon" href="/favicon.ico" />
     <link rel="icon" type="image/png" sizes="64x64" href="/favicon.png" />
     <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
 
@@ -14,17 +15,39 @@
 
     <!-- Open Graph -->
     <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="IB Grade Tracker" />
     <meta property="og:url" content="https://ibgradetracker.vercel.app/" />
     <meta property="og:title" content="IB Grade Tracker | Track IB Grades, Predicted Scores and Progress" />
     <meta property="og:description" content="IB Grade Tracker is a student-made platform that helps IB students track grades, predicted scores, subject goals, core points, progress graphs, and university targets." />
-    <meta property="og:image" content="https://ibgradetracker.vercel.app/favicon.png" />
+    <meta property="og:image" content="https://ibgradetracker.vercel.app/apple-touch-icon.png" />
 
     <!-- Twitter Card -->
     <meta name="twitter:card" content="summary" />
+    <meta name="twitter:site" content="@IBGradeTracker" />
     <meta name="twitter:url" content="https://ibgradetracker.vercel.app/" />
     <meta name="twitter:title" content="IB Grade Tracker | Track IB Grades, Predicted Scores and Progress" />
     <meta name="twitter:description" content="IB Grade Tracker is a student-made platform that helps IB students track grades, predicted scores, subject goals, core points, progress graphs, and university targets." />
-    <meta name="twitter:image" content="https://ibgradetracker.vercel.app/favicon.png" />
+    <meta name="twitter:image" content="https://ibgradetracker.vercel.app/apple-touch-icon.png" />
+
+    <!-- WebSite Structured Data (helps Google show correct site name & favicon) -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "WebSite",
+      "name": "IB Grade Tracker",
+      "alternateName": "Your Grade Tracker",
+      "url": "https://ibgradetracker.vercel.app/",
+      "description": "IB Grade Tracker is a student-made platform that helps IB students track grades, predicted scores, subject goals, core points, progress graphs, and university targets.",
+      "potentialAction": {
+        "@type": "SearchAction",
+        "target": {
+          "@type": "EntryPoint",
+          "urlTemplate": "https://ibgradetracker.vercel.app/?q={search_term_string}"
+        },
+        "query-input": "required name=search_term_string"
+      }
+    }
+    </script>
 
     <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
