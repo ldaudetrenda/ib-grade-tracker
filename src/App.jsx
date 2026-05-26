@@ -13,6 +13,9 @@ import LoginPage from './pages/LoginPage';
 import SignupPage from './pages/SignupPage';
 import HowItWorksPage from './pages/HowItWorksPage';
 import DreamUniversity from './pages/DreamUniversity';
+import { IbGradeTrackerPage, IbGradeCalculatorPage, IbPredictedGradeCalculatorPage, IbProgressTrackerPage, IbOrganizerPage, IbHelpPage } from './pages/SEOPages';
+
+const SEO_PATHS = new Set(['/ib-grade-tracker', '/ib-grade-calculator', '/ib-predicted-grade-calculator', '/ib-progress-tracker', '/ib-organizer', '/ib-help']);
 
 // ─── Navbar ───────────────────────────────────────────────────────────────────
 function Navbar() {
@@ -146,8 +149,23 @@ function Navbar() {
 // ─── Inner App (needs AuthContext) ────────────────────────────────────────────
 function AppInner() {
   const { state } = useApp();
+  const location = useLocation();
 
   useEffect(() => { logEvent('app_opened'); }, []);
+
+  // SEO landing pages are publicly accessible without setup or login
+  if (SEO_PATHS.has(location.pathname)) {
+    return (
+      <Routes>
+        <Route path="/ib-grade-tracker" element={<IbGradeTrackerPage />} />
+        <Route path="/ib-grade-calculator" element={<IbGradeCalculatorPage />} />
+        <Route path="/ib-predicted-grade-calculator" element={<IbPredictedGradeCalculatorPage />} />
+        <Route path="/ib-progress-tracker" element={<IbProgressTrackerPage />} />
+        <Route path="/ib-organizer" element={<IbOrganizerPage />} />
+        <Route path="/ib-help" element={<IbHelpPage />} />
+      </Routes>
+    );
+  }
 
   if (!state.isSetupComplete) {
     return <Setup />;

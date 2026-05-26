@@ -1389,7 +1389,7 @@ export default function Dashboard() {
               Here's your IB progress overview
             </p>
             <p style={{ color: 'var(--text-light)', fontSize: '0.78rem', marginTop: '0.25rem', maxWidth: '520px' }}>
-              IB Grade Tracker helps IB students track grades, predicted scores, subject goals, core points, progress graphs, and university targets.
+              IB Grade Tracker is a student-made IB organizer that helps IB students track grades, predicted scores, subject goals, core points, progress graphs, and university targets.
             </p>
           </div>
           <Link to="/settings" style={{ textDecoration: 'none' }}>
