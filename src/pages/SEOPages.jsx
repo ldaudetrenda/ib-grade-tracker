@@ -1,7 +1,7 @@
 import React, { useEffect } from 'react';
 import { Link } from 'react-router-dom';
 
-const SITE = 'https://ibgradetracker.vercel.app';
+const SITE = 'https://ib-grade-tracker.vercel.app';
 
 const SEO_LINKS = [
   { path: '/ib-grade-tracker', label: 'IB Grade Tracker' },

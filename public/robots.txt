@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://ibgradetracker.vercel.app/sitemap.xml
+Sitemap: https://ib-grade-tracker.vercel.app/sitemap.xml
