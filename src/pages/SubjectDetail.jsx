@@ -18,7 +18,7 @@ import {
   getLatestTokGrade,
 } from '../context/AppContext';
 
-const QUARTER_LABELS = { 1: 'Quarter 1', 2: 'Quarter 2', 3: 'Quarter 3', 4: 'Quarter 4' };
+const QUARTER_LABELS = { 1: 'Quarter 1', 2: 'Quarter 2', 3: 'Quarter 3', 4: 'Quarter 4', 5: 'Quarter 5', 6: 'Quarter 6', 7: 'Quarter 7', 8: 'Quarter 8' };
 
 // ─── Quarter Card ─────────────────────────────────────────────────────────────
 function QuarterCard({ quarter, grades, subjectId, dispatch, isTok = false }) {
@@ -279,6 +279,16 @@ export default function SubjectDetail() {
     return getQuarterAvg([...(quarters[3] || []), ...(quarters[4] || [])]);
   }, [quarters, isTok]);
 
+  const sem3Avg = useMemo(() => {
+    if (isTok) return null;
+    return getQuarterAvg([...(quarters[5] || []), ...(quarters[6] || [])]);
+  }, [quarters, isTok]);
+
+  const sem4Avg = useMemo(() => {
+    if (isTok) return null;
+    return getQuarterAvg([...(quarters[7] || []), ...(quarters[8] || [])]);
+  }, [quarters, isTok]);
+
   const allGradesAvg = useMemo(() => {
     if (isTok) return null;
     const all = Object.values(quarters).flat();
@@ -289,12 +299,12 @@ export default function SubjectDetail() {
   const status = isTok ? null : getStatusInfo(predicted, subject.goalGrade);
 
   // Charts only for regular subjects
-  const lineData = !isTok ? [1, 2, 3, 4].map(q => {
+  const lineData = !isTok ? [1, 2, 3, 4, 5, 6, 7, 8].map(q => {
     const avg = getQuarterAvg(quarters[q]);
     return { name: `Q${q}`, avg: avg !== null ? +avg.toFixed(2) : null };
   }) : [];
 
-  const barData = !isTok ? [1, 2, 3, 4].map(q => ({
+  const barData = !isTok ? [1, 2, 3, 4, 5, 6, 7, 8].map(q => ({
     quarter: `Q${q}`,
     avg: getQuarterAvg(quarters[q]),
   })).filter(d => d.avg !== null) : [];
@@ -427,7 +437,7 @@ export default function SubjectDetail() {
           <>
             <hr className="divider" />
             <div style={{ display: 'flex', gap: '1.5rem', flexWrap: 'wrap' }}>
-              {[{ label: 'Sem 1 Average (Q1–Q2)', avg: sem1Avg }, { label: 'Sem 2 Average (Q3–Q4)', avg: sem2Avg }].map(({ label, avg }) => (
+              {[{ label: 'Y1 Sem 1 (Q1–Q2)', avg: sem1Avg }, { label: 'Y1 Sem 2 (Q3–Q4)', avg: sem2Avg }, { label: 'Y2 Sem 1 (Q5–Q6)', avg: sem3Avg }, { label: 'Y2 Sem 2 (Q7–Q8)', avg: sem4Avg }].map(({ label, avg }) => (
                 <div key={label}>
                   <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 600, marginBottom: '0.125rem' }}>{label}</div>
                   <div style={{ fontWeight: 700, fontSize: '1.125rem', color: avg !== null ? getGradeColor(Math.round(avg)) : 'var(--text-light)' }}>
@@ -468,7 +478,7 @@ export default function SubjectDetail() {
       <div style={{ marginBottom: '1.5rem' }}>
         <h2 style={{ marginBottom: '1rem' }}>Quarter Grades</h2>
         <div className="quarters-grid">
-          {[1, 2, 3, 4].map(q => (
+          {[1, 2, 3, 4, 5, 6, 7, 8].map(q => (
             <QuarterCard
               key={q}
               quarter={q}
@@ -544,10 +554,10 @@ export default function SubjectDetail() {
                 </tr>
               </thead>
               <tbody>
-                {[1, 2, 3, 4].map(q => {
+                {[1, 2, 3, 4, 5, 6, 7, 8].map(q => {
                   const g = quarters[q] || [];
                   const avg = isTok ? null : getQuarterAvg(g);
-                  const semAvg = isTok ? null : (q <= 2 ? sem1Avg : sem2Avg);
+                  const semAvg = isTok ? null : (q <= 2 ? sem1Avg : q <= 4 ? sem2Avg : q <= 6 ? sem3Avg : sem4Avg);
                   return (
                     <tr key={q}>
                       <td style={{ fontWeight: 600 }}>{QUARTER_LABELS[q]}</td>

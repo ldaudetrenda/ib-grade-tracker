@@ -107,7 +107,7 @@ export default function Setup({ editMode = false }) {
       group: s.group,
       groupName: s.groupName,
       goalGrade: subjectGoals[s.name] || (s.level === 'HL' ? 6 : 5),
-      quarters: { 1: [], 2: [], 3: [], 4: [] },
+      quarters: { 1: [], 2: [], 3: [], 4: [], 5: [], 6: [], 7: [], 8: [] },
     }));
     if (editMode) {
       dispatch({ type: 'UPDATE_SUBJECTS', payload: { subjects } });

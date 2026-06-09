@@ -152,7 +152,7 @@ const initialState = {
     name: 'Theory of Knowledge',
     level: 'CORE',
     goalGrade: 'A',
-    quarters: { 1: [], 2: [], 3: [], 4: [] },
+    quarters: { 1: [], 2: [], 3: [], 4: [], 5: [], 6: [], 7: [], 8: [] },
   },
 };
 
