@@ -78,9 +78,27 @@ export function getLatestTokGrade(tokQuarters) {
 }
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
+
+// Extract numeric grade from mixed format (number or {g, m, t})
+export function getGradeValue(entry) {
+  if (typeof entry === 'number') return entry;
+  if (entry && typeof entry === 'object' && typeof entry.g === 'number') return entry.g;
+  return null;
+}
+
+// Extract marks info from an entry, or null if no marks
+export function getMarksInfo(entry) {
+  if (entry && typeof entry === 'object' && typeof entry.m === 'number' && typeof entry.t === 'number' && entry.t > 0) {
+    return { earned: entry.m, total: entry.t, pct: Math.round((entry.m / entry.t) * 100) };
+  }
+  return null;
+}
+
 export function getQuarterAvg(grades) {
   if (!grades || grades.length === 0) return null;
-  return grades.reduce((a, b) => a + b, 0) / grades.length;
+  const vals = grades.map(getGradeValue).filter(v => v !== null);
+  if (vals.length === 0) return null;
+  return vals.reduce((a, b) => a + b, 0) / vals.length;
 }
 
 export function getSemesterAvg(subject, semester) {
@@ -94,7 +112,7 @@ export function getSemesterAvg(subject, semester) {
 }
 
 export function getPredictedGrade(subject) {
-  const all = Object.values(subject.quarters).flat();
+  const all = Object.values(subject.quarters).flat().map(getGradeValue).filter(v => v !== null);
   if (all.length === 0) return null;
   return Math.min(7, Math.max(1, Math.round(all.reduce((a, b) => a + b, 0) / all.length)));
 }
@@ -219,7 +237,10 @@ function reducer(state, action) {
     }
 
     case 'ADD_GRADE': {
-      const { subjectId, quarter, grade } = action.payload;
+      const { subjectId, quarter, grade, marksEarned, marksTotal } = action.payload;
+      const entry = (marksEarned !== undefined && marksTotal !== undefined)
+        ? { g: grade, m: marksEarned, t: marksTotal }
+        : grade;
       return {
         ...state,
         subjects: state.subjects.map(s => {
@@ -227,7 +248,7 @@ function reducer(state, action) {
           const existing = s.quarters[quarter] || [];
           return {
             ...s,
-            quarters: { ...s.quarters, [quarter]: [...existing, grade] },
+            quarters: { ...s.quarters, [quarter]: [...existing, entry] },
           };
         }),
       };
@@ -247,13 +268,22 @@ function reducer(state, action) {
     }
 
     case 'EDIT_GRADE': {
-      const { subjectId, quarter, index, grade } = action.payload;
+      const { subjectId, quarter, index, grade, marksEarned, marksTotal } = action.payload;
       return {
         ...state,
         subjects: state.subjects.map(s => {
           if (s.id !== subjectId) return s;
           const updated = [...(s.quarters[quarter] || [])];
-          updated[index] = grade;
+          const existingEntry = updated[index];
+          if (marksEarned !== undefined && marksTotal !== undefined) {
+            if (typeof existingEntry === 'object') {
+              updated[index] = { g: grade, m: marksEarned, t: marksTotal };
+            } else {
+              updated[index] = { g: grade, m: marksEarned, t: marksTotal };
+            }
+          } else {
+            updated[index] = grade;
+          }
           return { ...s, quarters: { ...s.quarters, [quarter]: updated } };
         }),
       };

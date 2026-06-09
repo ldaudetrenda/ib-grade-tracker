@@ -10,6 +10,8 @@ import {
   useApp,
   getQuarterAvg,
   getPredictedGrade,
+  getGradeValue,
+  getMarksInfo,
   getGradeColor,
   getGradeClass,
   getStatusInfo,
@@ -26,9 +28,18 @@ function QuarterCard({ quarter, grades, subjectId, dispatch, isTok = false }) {
   const [error, setError] = useState('');
   const [editingIndex, setEditingIndex] = useState(null);
   const [editError, setEditError] = useState('');
+  const [marksEarned, setMarksEarned] = useState('');
+  const [marksTotal, setMarksTotal] = useState('');
+  const [editMarksEarned, setEditMarksEarned] = useState('');
+  const [editMarksTotal, setEditMarksTotal] = useState('');
 
   // Only compute numeric average for regular subjects
   const avg = isTok ? null : getQuarterAvg(grades);
+
+  // Calculate percentage preview
+  const calcPct = marksEarned && marksTotal && Number(marksTotal) > 0
+    ? Math.round((Number(marksEarned) / Number(marksTotal)) * 100)
+    : null;
 
   // ── Regular subject: add grade via form ──
   function addGrade(e) {
@@ -38,10 +49,14 @@ function QuarterCard({ quarter, grades, subjectId, dispatch, isTok = false }) {
       setError('Enter a whole number from 1 to 7');
       return;
     }
-    dispatch({ type: 'ADD_GRADE', payload: { subjectId, quarter, grade: val } });
+    const me = marksEarned !== '' ? Number(marksEarned) : undefined;
+    const mt = marksTotal !== '' ? Number(marksTotal) : undefined;
+    dispatch({ type: 'ADD_GRADE', payload: { subjectId, quarter, grade: val, marksEarned: me, marksTotal: mt } });
     logEvent('grade_added');
     setInput('');
     setError('');
+    setMarksEarned('');
+    setMarksTotal('');
   }
 
   // ── TOK: add letter grade via button ──
@@ -61,18 +76,6 @@ function QuarterCard({ quarter, grades, subjectId, dispatch, isTok = false }) {
 
   function startEdit(index) {
     setEditingIndex(index);
-    setEditError('');
-  }
-
-  // ── Regular subject: save numeric edit ──
-  function saveNumericEdit(index, rawValue) {
-    const val = Number(rawValue);
-    if (!Number.isInteger(val) || val < 1 || val > 7) {
-      setEditError('1–7 only');
-      return;
-    }
-    dispatch({ type: 'EDIT_GRADE', payload: { subjectId, quarter, index, grade: val } });
-    setEditingIndex(null);
     setEditError('');
   }
 
@@ -140,30 +143,45 @@ function QuarterCard({ quarter, grades, subjectId, dispatch, isTok = false }) {
                 ><X size={10} /></button>
               </div>
             ) : (
-              // Regular subject edit: number input
-              <NumericEditInline
+              // Regular subject edit: number input + optional marks
+              <NumericEditInlineWithMarks
                 key={i}
-                current={g}
-                onSave={val => saveNumericEdit(i, val)}
+                entry={g}
+                onSave={({ grade, marksEarned, marksTotal }) => {
+                  dispatch({ type: 'EDIT_GRADE', payload: { subjectId, quarter, index: i, grade, marksEarned, marksTotal } });
+                  setEditingIndex(null);
+                  setEditError('');
+                }}
                 onCancel={cancelEdit}
                 error={editError}
                 setError={setEditError}
               />
             )
           ) : (
-            <div key={i} className="grade-pill" style={{
-              background: isTok ? `${getTokColor(g)}18` : `${getGradeColor(Math.round(g))}15`,
-              color: isTok ? getTokColor(g) : getGradeColor(Math.round(g)),
-            }}>
-              <span
-                style={{ cursor: 'pointer', userSelect: 'none', fontWeight: 700 }}
-                onClick={() => startEdit(i)}
-                title="Click to edit"
-              >{isTok ? g : Math.round(g)}</span>
-              <div style={{ display: 'flex', gap: '0.1rem', alignItems: 'center' }}>
-                <button onClick={() => startEdit(i)} title="Edit" style={pillBase}><Pencil size={9} /></button>
-                <button onClick={() => removeGrade(i)} title="Remove" style={pillBase}><X size={11} /></button>
+            <div key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.15rem' }}>
+              <div className="grade-pill" style={{
+                background: isTok ? `${getTokColor(g)}18` : `${getGradeColor(Math.round(getGradeValue(g)))}15`,
+                color: isTok ? getTokColor(g) : getGradeColor(Math.round(getGradeValue(g))),
+              }}>
+                <span
+                  style={{ cursor: 'pointer', userSelect: 'none', fontWeight: 700 }}
+                  onClick={() => { startEdit(i); const mi = getMarksInfo(g); if (mi) { setEditMarksEarned(String(mi.earned)); setEditMarksTotal(String(mi.total)); } else { setEditMarksEarned(''); setEditMarksTotal(''); } }}
+                  title="Click to edit"
+                >{isTok ? g : Math.round(getGradeValue(g))}</span>
+                <div style={{ display: 'flex', gap: '0.1rem', alignItems: 'center' }}>
+                  <button onClick={() => { startEdit(i); const mi = getMarksInfo(g); if (mi) { setEditMarksEarned(String(mi.earned)); setEditMarksTotal(String(mi.total)); } else { setEditMarksEarned(''); setEditMarksTotal(''); } }} title="Edit" style={pillBase}><Pencil size={9} /></button>
+                  <button onClick={() => removeGrade(i)} title="Remove" style={pillBase}><X size={11} /></button>
+                </div>
               </div>
+              {!isTok && (() => {
+                const mi = getMarksInfo(g);
+                if (!mi) return null;
+                return (
+                  <span style={{ fontSize: '0.6rem', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>
+                    {mi.earned}/{mi.total} · {mi.pct}%
+                  </span>
+                );
+              })()}
             </div>
           )
         )}
@@ -192,49 +210,125 @@ function QuarterCard({ quarter, grades, subjectId, dispatch, isTok = false }) {
           ))}
         </div>
       ) : (
-        <form className="add-grade-form" onSubmit={addGrade} style={{ marginTop: '0.75rem' }}>
-          <input
-            type="number"
-            min="1" max="7" step="1"
-            placeholder="1–7"
-            value={input}
-            onChange={e => { setInput(e.target.value); setError(''); }}
-          />
-          <button type="submit" className="btn btn-primary btn-sm">
-            <Plus size={13} /> Add
-          </button>
-        </form>
+        <div style={{ marginTop: '0.75rem' }}>
+          <form className="add-grade-form" onSubmit={addGrade}>
+            <input
+              type="number" min="1" max="7" step="1"
+              placeholder="1–7"
+              value={input}
+              onChange={e => { setInput(e.target.value); setError(''); }}
+            />
+            <button type="submit" className="btn btn-primary btn-sm">
+              <Plus size={13} /> Add
+            </button>
+          </form>
+          {/* Optional marks */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', marginTop: '0.4rem', flexWrap: 'wrap' }}>
+            <span style={{ fontSize: '0.67rem', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.03em' }}>Marks:</span>
+            <input
+              type="number" min="0" step="0.5"
+              placeholder="Earned"
+              value={marksEarned}
+              onChange={e => setMarksEarned(e.target.value)}
+              style={{
+                width: '3.5rem', padding: '0.2rem 0.35rem',
+                border: '1.5px solid var(--border)', borderRadius: 6,
+                fontSize: '0.8rem', textAlign: 'center', fontFamily: 'inherit',
+              }}
+            />
+            <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontWeight: 600 }}>/</span>
+            <input
+              type="number" min="0" step="0.5"
+              placeholder="Total"
+              value={marksTotal}
+              onChange={e => setMarksTotal(e.target.value)}
+              style={{
+                width: '3.5rem', padding: '0.2rem 0.35rem',
+                border: '1.5px solid var(--border)', borderRadius: 6,
+                fontSize: '0.8rem', textAlign: 'center', fontFamily: 'inherit',
+              }}
+            />
+            {calcPct !== null && (
+              <span style={{ fontSize: '0.72rem', fontWeight: 700, color: '#4F46E5' }}>
+                = {calcPct}%
+              </span>
+            )}
+          </div>
+        </div>
       )}
       {error && <p style={{ fontSize: '0.75rem', color: 'var(--danger)', marginTop: '0.25rem' }}>{error}</p>}
     </div>
   );
 }
 
-// Small inline numeric edit component (keeps QuarterCard clean)
-function NumericEditInline({ current, onSave, onCancel, error, setError }) {
-  const [val, setVal] = useState(String(Math.round(current)));
+// Small inline numeric edit with optional marks
+function NumericEditInlineWithMarks({ entry, onSave, onCancel, error, setError }) {
+  const currentGrade = getGradeValue(entry);
+  const existingMarks = getMarksInfo(entry);
+  const [gradeVal, setGradeVal] = useState(String(Math.round(currentGrade)));
+  const [marksE, setMarksE] = useState(existingMarks ? String(existingMarks.earned) : '');
+  const [marksT, setMarksT] = useState(existingMarks ? String(existingMarks.total) : '');
+  const pctPreview = marksE && marksT && Number(marksT) > 0
+    ? Math.round((Number(marksE) / Number(marksT)) * 100)
+    : null;
+
+  function handleSave() {
+    const val = Number(gradeVal);
+    if (!Number.isInteger(val) || val < 1 || val > 7) {
+      setError && setError('1–7 only');
+      return;
+    }
+    onSave({
+      grade: val,
+      marksEarned: marksE !== '' ? Number(marksE) : undefined,
+      marksTotal: marksT !== '' ? Number(marksT) : undefined,
+    });
+  }
+
   return (
-    <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.2rem' }}>
-      <input
-        type="number" min="1" max="7" step="1"
-        value={val}
-        onChange={e => { setVal(e.target.value); setError && setError(''); }}
-        onKeyDown={e => { if (e.key === 'Enter') onSave(val); if (e.key === 'Escape') onCancel(); }}
-        style={{
-          width: '2.5rem', padding: '0.2rem 0.35rem',
-          border: `1.5px solid ${error ? 'var(--danger)' : 'var(--primary)'}`,
-          borderRadius: 6, fontSize: '0.875rem', textAlign: 'center',
-          fontFamily: 'inherit', fontWeight: 700,
-        }}
-        autoFocus
-      />
-      <button onClick={() => onSave(val)} title="Save"
-        style={{ width: '1.4rem', height: '1.4rem', borderRadius: '50%', border: 'none', background: 'var(--success)', color: 'white', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-      ><Check size={10} /></button>
-      <button onClick={onCancel} title="Cancel"
-        style={{ width: '1.4rem', height: '1.4rem', borderRadius: '50%', border: 'none', background: 'var(--border)', color: 'var(--text-muted)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-      ><X size={10} /></button>
-      {error && <span style={{ fontSize: '0.7rem', color: 'var(--danger)' }}>{error}</span>}
+    <div style={{ display: 'inline-flex', flexDirection: 'column', gap: '0.2rem', alignItems: 'flex-start' }}>
+      <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.2rem' }}>
+        <input
+          type="number" min="1" max="7" step="1"
+          value={gradeVal}
+          onChange={e => { setGradeVal(e.target.value); setError && setError(''); }}
+          onKeyDown={e => { if (e.key === 'Enter') handleSave(); if (e.key === 'Escape') onCancel(); }}
+          style={{
+            width: '2.5rem', padding: '0.2rem 0.35rem',
+            border: `1.5px solid ${error ? 'var(--danger)' : 'var(--primary)'}`,
+            borderRadius: 6, fontSize: '0.875rem', textAlign: 'center',
+            fontFamily: 'inherit', fontWeight: 700,
+          }}
+          autoFocus
+        />
+        <button onClick={handleSave} title="Save"
+          style={{ width: '1.4rem', height: '1.4rem', borderRadius: '50%', border: 'none', background: 'var(--success)', color: 'white', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+        ><Check size={10} /></button>
+        <button onClick={onCancel} title="Cancel"
+          style={{ width: '1.4rem', height: '1.4rem', borderRadius: '50%', border: 'none', background: 'var(--border)', color: 'var(--text-muted)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+        ><X size={10} /></button>
+        {error && <span style={{ fontSize: '0.7rem', color: 'var(--danger)' }}>{error}</span>}
+      </div>
+      {/* Optional marks edit */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+        <span style={{ fontSize: '0.6rem', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase' }}>Marks:</span>
+        <input
+          type="number" min="0" step="0.5"
+          value={marksE}
+          onChange={e => setMarksE(e.target.value)}
+          style={{ width: '2.5rem', padding: '0.1rem 0.25rem', border: '1.5px solid var(--border)', borderRadius: 6, fontSize: '0.75rem', textAlign: 'center', fontFamily: 'inherit' }}
+        />
+        <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 600 }}>/</span>
+        <input
+          type="number" min="0" step="0.5"
+          value={marksT}
+          onChange={e => setMarksT(e.target.value)}
+          style={{ width: '2.5rem', padding: '0.1rem 0.25rem', border: '1.5px solid var(--border)', borderRadius: 6, fontSize: '0.75rem', textAlign: 'center', fontFamily: 'inherit' }}
+        />
+        {pctPreview !== null && (
+          <span style={{ fontSize: '0.68rem', fontWeight: 700, color: '#4F46E5' }}>= {pctPreview}%</span>
+        )}
+      </div>
     </div>
   );
 }
@@ -291,9 +385,19 @@ export default function SubjectDetail() {
 
   const allGradesAvg = useMemo(() => {
     if (isTok) return null;
-    const all = Object.values(quarters).flat();
+    const all = Object.values(quarters).flat().map(getGradeValue).filter(v => v !== null);
     if (all.length === 0) return null;
     return all.reduce((a, b) => a + b, 0) / all.length;
+  }, [quarters, isTok]);
+
+  // Average percentage across grade entries that have marks data
+  const avgPercentage = useMemo(() => {
+    if (isTok) return null;
+    const all = Object.values(quarters).flat();
+    const withMarks = all.map(getMarksInfo).filter(Boolean);
+    if (withMarks.length === 0) return null;
+    const total = withMarks.reduce((s, m) => s + m.pct, 0);
+    return Math.round(total / withMarks.length);
   }, [quarters, isTok]);
 
   const status = isTok ? null : getStatusInfo(predicted, subject.goalGrade);
@@ -418,6 +522,28 @@ export default function SubjectDetail() {
               </div>
             )}
 
+            {/* Average Percentage (subjects only) */}
+            {!isTok && avgPercentage !== null && (
+              <div style={{ background: 'var(--bg)', borderRadius: 'var(--radius-sm)', padding: '0.625rem 1rem', textAlign: 'center' }}>
+                <div style={{ fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-muted)', marginBottom: '0.25rem' }}>
+                  Avg Percentage
+                </div>
+                <div style={{ fontSize: '1.25rem', fontWeight: 800, color: avgPercentage >= 70 ? '#059669' : avgPercentage >= 50 ? '#D97706' : '#DC2626' }}>
+                  {avgPercentage}%
+                </div>
+              </div>
+            )}
+            {!isTok && avgPercentage === null && hasAnyGrades && (
+              <div style={{ background: 'var(--bg)', borderRadius: 'var(--radius-sm)', padding: '0.625rem 1rem', textAlign: 'center' }}>
+                <div style={{ fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-muted)', marginBottom: '0.25rem' }}>
+                  Avg Percentage
+                </div>
+                <div style={{ fontSize: '0.72rem', fontWeight: 600, color: 'var(--text-light)' }}>
+                  No data yet
+                </div>
+              </div>
+            )}
+
             {/* Status (subjects only) */}
             {!isTok && status && (
               <div style={{ background: 'var(--bg)', borderRadius: 'var(--radius-sm)', padding: '0.625rem 1rem', textAlign: 'center' }}>
@@ -436,27 +562,76 @@ export default function SubjectDetail() {
         {!isTok && hasAnyGrades && (
           <>
             <hr className="divider" />
-            <div style={{ display: 'flex', gap: '1.5rem', flexWrap: 'wrap' }}>
-              {[{ label: 'Y1 Sem 1 (Q1–Q2)', avg: sem1Avg }, { label: 'Y1 Sem 2 (Q3–Q4)', avg: sem2Avg }, { label: 'Y2 Sem 1 (Q5–Q6)', avg: sem3Avg }, { label: 'Y2 Sem 2 (Q7–Q8)', avg: sem4Avg }].map(({ label, avg }) => (
-                <div key={label}>
-                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 600, marginBottom: '0.125rem' }}>{label}</div>
-                  <div style={{ fontWeight: 700, fontSize: '1.125rem', color: avg !== null ? getGradeColor(Math.round(avg)) : 'var(--text-light)' }}>
+
+            {/* All Grades Average — featured card */}
+            <div style={{
+              background: 'linear-gradient(135deg, #EEF2FF 0%, #E0E7FF 100%)',
+              border: '1.5px solid #C7D2FE',
+              borderRadius: '14px',
+              padding: '1.25rem 1.5rem',
+              textAlign: 'center',
+              marginBottom: '1.25rem',
+            }}>
+              <div style={{
+                fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase',
+                letterSpacing: '0.06em', color: '#4F46E5', marginBottom: '0.375rem',
+              }}>
+                All Grades Average
+              </div>
+              <div style={{
+                fontWeight: 800, fontSize: '2rem',
+                color: allGradesAvg !== null ? getGradeColor(Math.round(allGradesAvg)) : 'var(--text-light)',
+                lineHeight: 1.2,
+              }}>
+                {allGradesAvg !== null ? allGradesAvg.toFixed(2) : '–'}
+              </div>
+              <div style={{ fontSize: '0.75rem', color: '#6B7280', marginTop: '0.25rem' }}>
+                Based on all grades entered across {Object.values(quarters).reduce((sum, g) => sum + g.length, 0)} entries
+              </div>
+            </div>
+
+            {/* Semester cards grid */}
+            <div style={{
+              display: 'flex', flexWrap: 'wrap', gap: '0.75rem',
+              justifyContent: 'center',
+            }}>
+              {[
+                { label: 'Y1 Sem 1', sub: 'Q1–Q2', avg: sem1Avg },
+                { label: 'Y1 Sem 2', sub: 'Q3–Q4', avg: sem2Avg },
+                { label: 'Y2 Sem 1', sub: 'Q5–Q6', avg: sem3Avg },
+                { label: 'Y2 Sem 2', sub: 'Q7–Q8', avg: sem4Avg },
+                { label: 'Annual Average', sub: 'All quarters', avg: predicted },
+              ].map(({ label, sub, avg }) => (
+                <div key={label} style={{
+                  background: 'var(--bg)',
+                  border: '1.5px solid var(--border)',
+                  borderRadius: '12px',
+                  padding: '0.875rem 1.25rem',
+                  textAlign: 'center',
+                  minWidth: '130px',
+                  flex: '1 0 auto',
+                  maxWidth: '170px',
+                }}>
+                  <div style={{
+                    fontSize: '0.72rem', fontWeight: 700, textTransform: 'uppercase',
+                    letterSpacing: '0.04em', color: 'var(--text-muted)', marginBottom: '0.125rem',
+                  }}>
+                    {label}
+                  </div>
+                  <div style={{
+                    fontSize: '0.65rem', color: 'var(--text-light)',
+                    marginBottom: '0.375rem',
+                  }}>
+                    {sub}
+                  </div>
+                  <div style={{
+                    fontWeight: 700, fontSize: '1.2rem',
+                    color: avg !== null ? getGradeColor(Math.round(avg)) : 'var(--text-light)',
+                  }}>
                     {avg !== null ? avg.toFixed(2) : '–'}
                   </div>
                 </div>
               ))}
-              <div>
-                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 600, marginBottom: '0.125rem' }}>Annual Average</div>
-                <div style={{ fontWeight: 700, fontSize: '1.125rem', color: predicted ? getGradeColor(Math.round(predicted)) : 'var(--text-light)' }}>
-                  {predicted !== null ? predicted : '–'}
-                </div>
-              </div>
-              <div>
-                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 600, marginBottom: '0.125rem' }}>All Grades Average</div>
-                <div style={{ fontWeight: 700, fontSize: '1.125rem', color: allGradesAvg !== null ? getGradeColor(Math.round(allGradesAvg)) : 'var(--text-light)' }}>
-                  {allGradesAvg !== null ? allGradesAvg.toFixed(2) : 'No grades yet'}
-                </div>
-              </div>
             </div>
           </>
         )}
@@ -576,11 +751,21 @@ export default function SubjectDetail() {
                               }}>{grade}</span>
                             ))
                           ) : (
-                            g.map((grade, i) => (
-                              <span key={i} className={`grade-badge ${getGradeClass(Math.round(grade))}`} style={{ width: 'auto', padding: '0.2rem 0.5rem', borderRadius: '4px', fontSize: '0.8rem' }}>
-                                {Math.round(grade)}
-                              </span>
-                            ))
+                            g.map((grade, i) => {
+                              const mi = getMarksInfo(grade);
+                              return (
+                                <div key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.1rem' }}>
+                                  <span className={`grade-badge ${getGradeClass(Math.round(getGradeValue(grade)))}`} style={{ padding: '0.2rem 0.5rem', borderRadius: '4px', fontSize: '0.8rem' }}>
+                                    {Math.round(getGradeValue(grade))}
+                                  </span>
+                                  {mi && (
+                                    <span style={{ fontSize: '0.55rem', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>
+                                      {mi.earned}/{mi.total}
+                                    </span>
+                                  )}
+                                </div>
+                              );
+                            })
                           )}
                         </div>
                       </td>
@@ -591,8 +776,7 @@ export default function SubjectDetail() {
                       )}
                       {!isTok && (
                         <td style={{ color: semAvg !== null ? getGradeColor(Math.round(semAvg)) : 'var(--text-light)', fontWeight: q % 2 === 0 ? 700 : 500 }}>
-                          {(q === 1 || q === 3) ? '' : semAvg !== null ? semAvg.toFixed(2) : '–'}
-                          {(q === 2 || q === 4) && semAvg === null ? '–' : null}
+                          {q % 2 === 1 ? '' : semAvg !== null ? semAvg.toFixed(2) : '–'}
                         </td>
                       )}
                     </tr>
