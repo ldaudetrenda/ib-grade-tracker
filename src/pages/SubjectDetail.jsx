@@ -49,6 +49,16 @@ function QuarterCard({ quarter, grades, subjectId, dispatch, isTok = false }) {
       setError('Enter a whole number from 1 to 7');
       return;
     }
+    // Validate marks: if either field is filled, both must be valid
+    const hasMarks = marksEarned !== '' || marksTotal !== '';
+    if (hasMarks) {
+      const me = Number(marksEarned);
+      const mt = Number(marksTotal);
+      if (isNaN(me) || isNaN(mt) || mt <= 0 || me < 0) {
+        setError('Enter valid numbers for marks.');
+        return;
+      }
+    }
     const me = marksEarned !== '' ? Number(marksEarned) : undefined;
     const mt = marksTotal !== '' ? Number(marksTotal) : undefined;
     dispatch({ type: 'ADD_GRADE', payload: { subjectId, quarter, grade: val, marksEarned: me, marksTotal: mt } });
@@ -211,41 +221,36 @@ function QuarterCard({ quarter, grades, subjectId, dispatch, isTok = false }) {
         </div>
       ) : (
         <div style={{ marginTop: '0.75rem' }}>
-          <form className="add-grade-form" onSubmit={addGrade}>
+          <form className="add-grade-form" onSubmit={addGrade} style={{ flexWrap: 'wrap' }}>
             <input
               type="number" min="1" max="7" step="1"
-              placeholder="1–7"
+              placeholder="Grade 1–7"
               value={input}
               onChange={e => { setInput(e.target.value); setError(''); }}
             />
-            <button type="submit" className="btn btn-primary btn-sm">
-              <Plus size={13} /> Add
-            </button>
-          </form>
-          {/* Optional marks */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', marginTop: '0.4rem', flexWrap: 'wrap' }}>
-            <span style={{ fontSize: '0.67rem', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.03em' }}>Marks:</span>
             <input
               type="number" min="0" step="0.5"
-              placeholder="Earned"
+              placeholder="Marks earned"
               value={marksEarned}
               onChange={e => setMarksEarned(e.target.value)}
               style={{
-                width: '3.5rem', padding: '0.2rem 0.35rem',
-                border: '1.5px solid var(--border)', borderRadius: 6,
-                fontSize: '0.8rem', textAlign: 'center', fontFamily: 'inherit',
+                width: '3.5rem', padding: '0.375rem 0.35rem',
+                border: '1.5px solid var(--border)', borderRadius: 'var(--radius-sm)',
+                fontSize: '0.875rem', textAlign: 'center', outline: 'none',
+                fontFamily: 'inherit', transition: 'border-color 0.15s',
               }}
             />
-            <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontWeight: 600 }}>/</span>
+            <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)', fontWeight: 600 }}>/</span>
             <input
               type="number" min="0" step="0.5"
               placeholder="Total"
               value={marksTotal}
               onChange={e => setMarksTotal(e.target.value)}
               style={{
-                width: '3.5rem', padding: '0.2rem 0.35rem',
-                border: '1.5px solid var(--border)', borderRadius: 6,
-                fontSize: '0.8rem', textAlign: 'center', fontFamily: 'inherit',
+                width: '3.5rem', padding: '0.375rem 0.35rem',
+                border: '1.5px solid var(--border)', borderRadius: 'var(--radius-sm)',
+                fontSize: '0.875rem', textAlign: 'center', outline: 'none',
+                fontFamily: 'inherit', transition: 'border-color 0.15s',
               }}
             />
             {calcPct !== null && (
@@ -253,7 +258,10 @@ function QuarterCard({ quarter, grades, subjectId, dispatch, isTok = false }) {
                 = {calcPct}%
               </span>
             )}
-          </div>
+            <button type="submit" className="btn btn-primary btn-sm">
+              <Plus size={13} /> Add
+            </button>
+          </form>
         </div>
       )}
       {error && <p style={{ fontSize: '0.75rem', color: 'var(--danger)', marginTop: '0.25rem' }}>{error}</p>}
