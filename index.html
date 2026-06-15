@@ -5,11 +5,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
     <!-- Favicon -->
-    <link rel="shortcut icon" href="/favicon.ico" />
-    <link rel="icon" type="image/x-icon" href="/favicon.ico" />
-    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
-    <link rel="icon" type="image/png" sizes="192x192" href="/favicon-192x192.png" />
-    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+    <link rel="icon" href="/favicon.ico" sizes="any">
+    <link rel="icon" type="image/png" sizes="48x48" href="/favicon-48x48.png">
+    <link rel="icon" type="image/png" sizes="96x96" href="/favicon-96x96.png">
+    <link rel="icon" type="image/png" sizes="192x192" href="/favicon-192x192.png">
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 
     <!-- Primary SEO -->
     <title>IB Grade Tracker | Track IB Grades, Predicted Scores and Progress</title>
@@ -32,15 +32,26 @@
     <meta name="twitter:description" content="IB Grade Tracker helps IB students track grades, predicted scores, subject goals, core points, progress graphs, and university targets." />
     <meta name="twitter:image" content="https://ib-grade-tracker.vercel.app/apple-touch-icon.png" />
 
-    <!-- WebSite Structured Data (tells Google the site name and favicon) -->
+    <!-- WebSite Structured Data (tells Google the site name) -->
     <script type="application/ld+json">
     {
       "@context": "https://schema.org",
       "@type": "WebSite",
       "name": "IB Grade Tracker",
-      "alternateName": "Your Grade Tracker",
+      "alternateName": ["Your Grade Tracker", "IBGradeTracker"],
       "url": "https://ib-grade-tracker.vercel.app/",
-      "description": "IB Grade Tracker is a student-made platform that helps IB students track grades, predicted scores, subject goals, core points, progress graphs, and university targets."
+      "description": "IB Grade Tracker helps IB students track grades, predicted scores, subject goals, core points, progress graphs, and university targets."
+    }
+    </script>
+
+    <!-- Organization Structured Data (tells Google the logo URL) -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "Organization",
+      "name": "IB Grade Tracker",
+      "url": "https://ib-grade-tracker.vercel.app/",
+      "logo": "https://ib-grade-tracker.vercel.app/favicon-192x192.png"
     }
     </script>
 
