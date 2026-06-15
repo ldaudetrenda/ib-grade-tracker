@@ -169,9 +169,9 @@ export default function Setup({ editMode = false }) {
               padding: '1rem 1.25rem',
               marginBottom: '1.5rem',
             }}>
-              <p style={{ fontSize: '0.875rem', color: 'var(--primary-dark)', fontWeight: 500 }}>
-                This app helps you track your IB predicted grades across all subjects.
-                You'll set up your 6 subjects (3 HL + 3 SL), set individual goals for each, and monitor your progress toward your target score.
+              <p style={{ fontSize: '0.875rem', color: 'var(--primary-dark)', fontWeight: 500, lineHeight: 1.6 }}>
+                IB Grade Tracker is a student-made platform that helps IB students track grades, predicted scores, subject goals, core points, progress, percentages, and university targets.
+                You'll set up your 6 subjects (3 HL + 3 SL), set individual goals for each, and monitor your progress quarter by quarter toward your target score.
               </p>
             </div>
           </div>

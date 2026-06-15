@@ -12,9 +12,9 @@ import LoginPage from './pages/LoginPage';
 import SignupPage from './pages/SignupPage';
 import HowItWorksPage from './pages/HowItWorksPage';
 import DreamUniversity from './pages/DreamUniversity';
-import { IbGradeTrackerPage, IbGradeCalculatorPage, IbPredictedGradeCalculatorPage, IbProgressTrackerPage, IbOrganizerPage, IbHelpPage } from './pages/SEOPages';
+import { IbGradeTrackerPage, IbGradeCalculatorPage, IbPredictedGradeCalculatorPage, IbProgressTrackerPage, IbOrganizerPage, IbStudentPlannerPage, IbScoreTrackerPage, IbHelpPage } from './pages/SEOPages';
 
-const SEO_PATHS = new Set(['/ib-grade-tracker', '/ib-grade-calculator', '/ib-predicted-grade-calculator', '/ib-progress-tracker', '/ib-organizer', '/ib-help']);
+const SEO_PATHS = new Set(['/ib-grade-tracker', '/ib-grade-calculator', '/ib-predicted-grade-calculator', '/ib-progress-tracker', '/ib-organizer', '/ib-student-planner', '/ib-score-tracker', '/ib-help']);
 
 // ─── Navbar ───────────────────────────────────────────────────────────────────
 function Navbar() {
@@ -156,6 +156,8 @@ function AppInner() {
         <Route path="/ib-predicted-grade-calculator" element={<IbPredictedGradeCalculatorPage />} />
         <Route path="/ib-progress-tracker" element={<IbProgressTrackerPage />} />
         <Route path="/ib-organizer" element={<IbOrganizerPage />} />
+        <Route path="/ib-student-planner" element={<IbStudentPlannerPage />} />
+        <Route path="/ib-score-tracker" element={<IbScoreTrackerPage />} />
         <Route path="/ib-help" element={<IbHelpPage />} />
       </Routes>
     );

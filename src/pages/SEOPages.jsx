@@ -9,6 +9,8 @@ const SEO_LINKS = [
   { path: '/ib-predicted-grade-calculator', label: 'IB Predicted Grade Calculator' },
   { path: '/ib-progress-tracker', label: 'IB Progress Tracker' },
   { path: '/ib-organizer', label: 'IB Organizer' },
+  { path: '/ib-student-planner', label: 'IB Student Planner' },
+  { path: '/ib-score-tracker', label: 'IB Score Tracker' },
   { path: '/ib-help', label: 'IB Help' },
 ];
 
@@ -507,8 +509,131 @@ export function IbHelpPage() {
         <li style={liSt}>How your core points affect your overall total</li>
         <li style={liSt}>Your grade history and improvement trends across all quarters</li>
       </ul>
+      <CTABox />
+    </SEOLayout>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// PAGE 7: /ib-student-planner
+// ─────────────────────────────────────────────────────────────────────────────
+export function IbStudentPlannerPage() {
+  return (
+    <SEOLayout
+      title="IB Student Planner | Plan Your IB Subjects, Goals and Core Points"
+      description="Use IB Grade Tracker as your free IB student planner. Organize HL and SL subjects, set grade goals, track TOK and EE core points, and plan for your target university score."
+      canonical={`${SITE}/ib-student-planner`}
+    >
+      <h1 style={h1St}>IB Student Planner</h1>
+      <p style={introSt}>
+        A good <strong>IB student planner</strong> does more than list deadlines — it helps you see the big picture of your IB Diploma. IB Grade Tracker is a free, student-made planner that organizes your six subjects, tracks your quarterly progress, monitors core points from TOK and the Extended Essay, and keeps your university target front and center — all in one dashboard.
+      </p>
+
+      <h2 style={h2St}>Why IB Students Need a Dedicated Planner</h2>
       <p style={pSt}>
-        If you're looking for IB help with your grades, the best place to start is by getting all your information organized in one place — and that's exactly what IB Grade Tracker is built to do.
+        The IB Diploma is demanding. With six subjects, three core components (TOK, EE, CAS), internal assessments, mock exams, and university applications running alongside your coursework, it is easy to lose track of where you stand academically. A spreadsheet can record your grades, but it does not help you plan what to improve.
+      </p>
+      <p style={pSt}>
+        IB Grade Tracker is designed as a complete <a href="/ib-organizer" style={{ color: '#4F46E5' }}>IB organizer</a> and planner. It connects your current grades to your goals, your quarterly progress to your predicted final score, and your predicted score to your Dream University requirements. Every number on the dashboard has meaning for your planning.
+      </p>
+
+      <h2 style={h2St}>Plan Your Subjects and Goals</h2>
+      <p style={pSt}>
+        The planner starts with your subject setup. You choose up to six subjects, mark each as HL or SL, and set a target grade for each one. Your targets become your planning benchmarks — every grade you log is compared against them, and the dashboard highlights which subjects need more attention.
+      </p>
+      <p style={pSt}>
+        If you are aiming for a 7 in Maths HL but currently sitting at a 5, your planner shows that gap clearly. You can see how improving that single subject would affect your total predicted score — a powerful way to prioritize your study time.
+      </p>
+
+      <h2 style={h2St}>Plan Across Two Years with Quarterly Tracking</h2>
+      <p style={pSt}>
+        IB Grade Tracker divides your IB journey into 8 quarters across Year 1 and Year 2. Logging your grades each quarter builds a running record that doubles as both a <a href="/ib-progress-tracker" style={{ color: '#4F46E5' }}>progress tracker</a> and a planning tool. You can see:
+      </p>
+      <ul style={ulSt}>
+        <li style={liSt}>Which subjects are improving quarter over quarter</li>
+        <li style={liSt}>Whether your overall trajectory is on track for your target score</li>
+        <li style={liSt}>Which subjects need a change in strategy before finals</li>
+        <li style={liSt}>How your core points from TOK and EE affect your total</li>
+      </ul>
+
+      <h2 style={h2St}>Plan Core Points Early</h2>
+      <p style={pSt}>
+        Core points are often treated as an afterthought — but they can add up to 3 bonus points to your total. A TOK grade of A combined with an EE grade of A earns the maximum 3 points, while a C in both gives you just 1. Planning for strong TOK and EE performance early can make a meaningful difference to your final score.
+      </p>
+      <p style={pSt}>
+        IB Grade Tracker tracks your TOK and EE grades in real time, so you always know where your core points stand and how they contribute to your predicted total. This kind of planning is especially important if your target university requires a specific IB score.
+      </p>
+
+      <h2 style={h2St}>Plan with Your University Target in Mind</h2>
+      <p style={pSt}>
+        The Dream University feature in IB Grade Tracker lets you set a specific score target based on a real university program IB requirements. Once set, every piece of planning data in your dashboard is measured against that real-world goal — not an arbitrary number you picked at the start of Year 1.
+      </p>
+
+      <h2 style={h2St}>How to Start Planning</h2>
+      <p style={pSt}>
+        Setting up your IB student planner takes less than two minutes. Add your subjects, set your goals, and log your first set of grades. From that moment, IB Grade Tracker becomes a live planning dashboard that updates with every new entry.
+      </p>
+
+      <CTABox />
+    </SEOLayout>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// PAGE 8: /ib-score-tracker
+// ─────────────────────────────────────────────────────────────────────────────
+export function IbScoreTrackerPage() {
+  return (
+    <SEOLayout
+      title="IB Score Tracker | Track Your IB Total Score Across All Subjects"
+      description="Track your IB score in real time with IB Grade Tracker. Monitor your total score, subject grades, predicted grades, core points, and goal gaps — all in one free dashboard."
+      canonical={`${SITE}/ib-score-tracker`}
+    >
+      <h1 style={h1St}>IB Score Tracker</h1>
+      <p style={introSt}>
+        The <strong>IB score tracker</strong> in IB Grade Tracker gives IB students a real-time view of their academic performance. Your total score — the sum of your six subject grades plus core bonus points from TOK and the Extended Essay — is calculated automatically and updated every time you log a new grade or change a core point.
+      </p>
+
+      <h2 style={h2St}>How the IB Score Works</h2>
+      <p style={pSt}>
+        Your IB Diploma score is built from two parts: your six subject grades (each on a 1-7 scale, totaling up to 42 points) and your core bonus points (up to 3 additional points from TOK and EE combined). The maximum possible score is 45. To earn the diploma, you need at least 24 points, no failing conditions in core components, and completion of CAS.
+      </p>
+      <p style={pSt}>
+        IB Grade Tracker <a href="/ib-grade-calculator" style={{ color: '#4F46E5' }}>IB grade calculator</a> handles all of this automatically. You do not need to manually add up your grades or remember how TOK and EE convert to bonus points — the score tracker does it for you.
+      </p>
+
+      <h2 style={h2St}>Track Your Total Score in Real Time</h2>
+      <p style={pSt}>
+        The dashboard displays your current predicted total prominently, alongside your target score. Every time you add a grade, update a TOK or EE result, or change a subject goal, the predicted score updates instantly. This live feedback makes the IB score tracker more useful than a static calculator — it evolves with you.
+      </p>
+      <p style={pSt}>
+        Your predicted score is calculated from your most recent grades across all subjects. If you log new grades in Quarter 3, the tracker uses those instead of Quarter 2 grades. This means your predicted total always reflects your latest performance.
+      </p>
+
+      <h2 style={h2St}>Track Subject Scores Individually</h2>
+      <p style={pSt}>
+        Beyond the total score, IB Grade Tracker lets you drill into each subject individually. Each subject page shows your grade history across all 8 quarters, your current average, and the gap between your current grade and your goal. This per-subject tracking is essential for understanding which courses are helping your total score and which are holding it back.
+      </p>
+      <p style={pSt}>
+        If you are also recording marks and percentages for your assessments, the subject page shows your average percentage alongside your grade average — giving you a clearer picture of your performance than either number alone.
+      </p>
+
+      <h2 style={h2St}>Score History and Progress</h2>
+      <p style={pSt}>
+        Your <a href="/ib-progress-tracker" style={{ color: '#4F46E5' }}>IB progress tracker</a> history shows how your total score has changed across quarters. You can see whether your score is trending up, holding steady, or declining — and respond before it is too late. A declining total in Year 2 is a clear signal to adjust your study strategy.
+      </p>
+
+      <h2 style={h2St}>Track Core Points Together with Subject Scores</h2>
+      <p style={pSt}>
+        Many IB students track their subject grades and core points separately, which makes it easy to forget how much core points contribute to the total. IB Grade Tracker combines both in one score tracker. Your TOK and EE grades are shown alongside your subjects, and their bonus point contribution is factored into your predicted total automatically.
+      </p>
+      <p style={pSt}>
+        For example, if your six subjects average 5.5 points each (total 33) and your TOK + EE combination earns 2 bonus points, your total score is 35. Without the score tracker combining them, you might plan based on 33 and miss the extra 2 points.
+      </p>
+
+      <h2 style={h2St}>Get Started Tracking Your Score</h2>
+      <p style={pSt}>
+        Tracking your IB score takes less than two minutes to set up. Enter your subjects, set your goals, and log your current grades. From that point, your score tracker is live and updates automatically every time you add new data.
       </p>
 
       <CTABox />
