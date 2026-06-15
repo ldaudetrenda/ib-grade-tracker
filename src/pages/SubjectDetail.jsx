@@ -30,6 +30,7 @@ function QuarterCard({ quarter, grades, subjectId, dispatch, isTok = false }) {
   const [editError, setEditError] = useState('');
   const [marksEarned, setMarksEarned] = useState('');
   const [marksTotal, setMarksTotal] = useState('');
+  const [marksError, setMarksError] = useState('');
   const [editMarksEarned, setEditMarksEarned] = useState('');
   const [editMarksTotal, setEditMarksTotal] = useState('');
 
@@ -38,7 +39,7 @@ function QuarterCard({ quarter, grades, subjectId, dispatch, isTok = false }) {
 
   // Calculate percentage preview
   const calcPct = marksEarned && marksTotal && Number(marksTotal) > 0
-    ? Math.round((Number(marksEarned) / Number(marksTotal)) * 100)
+    ? (Number(marksEarned) / Number(marksTotal)) * 100
     : null;
 
   // ── Regular subject: add grade via form ──
@@ -65,6 +66,7 @@ function QuarterCard({ quarter, grades, subjectId, dispatch, isTok = false }) {
     logEvent('grade_added');
     setInput('');
     setError('');
+    setMarksError('');
     setMarksEarned('');
     setMarksTotal('');
   }
@@ -224,28 +226,25 @@ function QuarterCard({ quarter, grades, subjectId, dispatch, isTok = false }) {
           <form className="add-grade-form" onSubmit={addGrade} style={{ flexWrap: 'wrap' }}>
             <input
               type="number" min="1" max="7" step="1"
-              placeholder="Grade 1–7"
+              placeholder="Grade"
               value={input}
               onChange={e => { setInput(e.target.value); setError(''); }}
             />
             <input
               type="number" min="0" step="5"
-              placeholder="Marks earned"
+              placeholder="Marks"
               value={marksEarned}
               onChange={e => {
                 const raw = e.target.value;
                 if (raw === '' || /^\d+$/.test(raw)) {
                   setMarksEarned(raw);
+                  setMarksError('');
+                } else {
+                  setMarksError('Whole numbers only');
                 }
               }}
-              style={{
-                width: '3.5rem', padding: '0.375rem 0.35rem',
-                border: '1.5px solid var(--border)', borderRadius: 'var(--radius-sm)',
-                fontSize: '0.875rem', textAlign: 'center', outline: 'none',
-                fontFamily: 'inherit', transition: 'border-color 0.15s',
-              }}
             />
-            <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)', fontWeight: 600 }}>/</span>
+            <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', fontWeight: 600 }}>/</span>
             <input
               type="number" min="0" step="5"
               placeholder="Total"
@@ -254,25 +253,27 @@ function QuarterCard({ quarter, grades, subjectId, dispatch, isTok = false }) {
                 const raw = e.target.value;
                 if (raw === '' || /^\d+$/.test(raw)) {
                   setMarksTotal(raw);
+                  setMarksError('');
+                } else {
+                  setMarksError('Whole numbers only');
                 }
               }}
-              style={{
-                width: '3.5rem', padding: '0.375rem 0.35rem',
-                border: '1.5px solid var(--border)', borderRadius: 'var(--radius-sm)',
-                fontSize: '0.875rem', textAlign: 'center', outline: 'none',
-                fontFamily: 'inherit', transition: 'border-color 0.15s',
-              }}
             />
-            {calcPct !== null && (
-              <span style={{ fontSize: '0.72rem', fontWeight: 700, color: '#4F46E5' }}>
-                = {calcPct}%
+            {marksError && (
+              <span style={{ fontSize: '0.55rem', color: 'var(--danger)', fontWeight: 600 }}>
+                {marksError}
               </span>
             )}
-            <button type="submit" className="btn btn-primary btn-sm">
-              <Plus size={13} /> Add
+            {calcPct !== null && (
+              <span style={{ fontSize: '0.65rem', fontWeight: 700, color: '#4F46E5' }}>
+                = {calcPct.toFixed(1)}%
+              </span>
+            )}
+            <button type="submit" className="btn btn-primary btn-sm" style={{ padding: '0.2rem 0.45rem', fontSize: '0.7rem' }}>
+              <Plus size={10} /> Add
             </button>
           </form>
-          <p style={{ fontSize: '0.67rem', color: 'var(--text-muted)', marginTop: '0.35rem', marginBottom: 0, lineHeight: 1.4 }}>
+          <p style={{ fontSize: '0.63rem', color: 'var(--text-muted)', marginTop: '0.3rem', marginBottom: 0, lineHeight: 1.3 }}>
             Marks are optional. Add them only if you want the app to calculate your percentage.
           </p>
         </div>
@@ -289,8 +290,9 @@ function NumericEditInlineWithMarks({ entry, onSave, onCancel, error, setError }
   const [gradeVal, setGradeVal] = useState(String(Math.round(currentGrade)));
   const [marksE, setMarksE] = useState(existingMarks ? String(existingMarks.earned) : '');
   const [marksT, setMarksT] = useState(existingMarks ? String(existingMarks.total) : '');
+  const [marksEditError, setMarksEditError] = useState('');
   const pctPreview = marksE && marksT && Number(marksT) > 0
-    ? Math.round((Number(marksE) / Number(marksT)) * 100)
+    ? (Number(marksE) / Number(marksT)) * 100
     : null;
 
   function handleSave() {
@@ -340,6 +342,9 @@ function NumericEditInlineWithMarks({ entry, onSave, onCancel, error, setError }
             const raw = e.target.value;
             if (raw === '' || /^\d+$/.test(raw)) {
               setMarksE(raw);
+              setMarksEditError('');
+            } else {
+              setMarksEditError('Whole numbers only');
             }
           }}
           style={{ width: '2.5rem', padding: '0.1rem 0.25rem', border: '1.5px solid var(--border)', borderRadius: 6, fontSize: '0.75rem', textAlign: 'center', fontFamily: 'inherit' }}
@@ -352,12 +357,20 @@ function NumericEditInlineWithMarks({ entry, onSave, onCancel, error, setError }
             const raw = e.target.value;
             if (raw === '' || /^\d+$/.test(raw)) {
               setMarksT(raw);
+              setMarksEditError('');
+            } else {
+              setMarksEditError('Whole numbers only');
             }
           }}
           style={{ width: '2.5rem', padding: '0.1rem 0.25rem', border: '1.5px solid var(--border)', borderRadius: 6, fontSize: '0.75rem', textAlign: 'center', fontFamily: 'inherit' }}
         />
+        {marksEditError && (
+            <span style={{ fontSize: '0.6rem', color: 'var(--danger)', fontWeight: 600, marginLeft: '0.15rem' }}>
+              {marksEditError}
+            </span>
+          )}
         {pctPreview !== null && (
-          <span style={{ fontSize: '0.68rem', fontWeight: 700, color: '#4F46E5' }}>= {pctPreview}%</span>
+          <span style={{ fontSize: '0.68rem', fontWeight: 700, color: '#4F46E5' }}>= {pctPreview.toFixed(1)}%</span>
         )}
       </div>
     </div>
@@ -428,7 +441,7 @@ export default function SubjectDetail() {
     const withMarks = all.map(getMarksInfo).filter(Boolean);
     if (withMarks.length === 0) return null;
     const total = withMarks.reduce((s, m) => s + m.pct, 0);
-    return Math.round(total / withMarks.length);
+    return total / withMarks.length;
   }, [quarters, isTok]);
 
   const status = isTok ? null : getStatusInfo(predicted, subject.goalGrade);
@@ -573,74 +586,30 @@ export default function SubjectDetail() {
           <>
             <hr className="divider" />
 
-            {/* Summary cards row */}
+            {/* All Grades Average — featured card */}
             <div style={{
-              display: 'flex', gap: '1rem', marginBottom: '1.25rem',
-              flexWrap: 'wrap',
+              background: 'linear-gradient(135deg, #EEF2FF 0%, #E0E7FF 100%)',
+              border: '1.5px solid #C7D2FE',
+              borderRadius: '14px',
+              padding: '1.25rem 1.5rem',
+              textAlign: 'center',
+              marginBottom: '1.25rem',
             }}>
-              {/* All Grades Average — featured card */}
               <div style={{
-                flex: '1 1 250px',
-                background: 'linear-gradient(135deg, #EEF2FF 0%, #E0E7FF 100%)',
-                border: '1.5px solid #C7D2FE',
-                borderRadius: '14px',
-                padding: '1.25rem 1.5rem',
-                textAlign: 'center',
+                fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase',
+                letterSpacing: '0.06em', color: '#4F46E5', marginBottom: '0.375rem',
               }}>
-                <div style={{
-                  fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase',
-                  letterSpacing: '0.06em', color: '#4F46E5', marginBottom: '0.375rem',
-                }}>
-                  All Grades Average
-                </div>
-                <div style={{
-                  fontWeight: 800, fontSize: '2rem',
-                  color: allGradesAvg !== null ? getGradeColor(Math.round(allGradesAvg)) : 'var(--text-light)',
-                  lineHeight: 1.2,
-                }}>
-                  {allGradesAvg !== null ? allGradesAvg.toFixed(2) : '–'}
-                </div>
-                <div style={{ fontSize: '0.75rem', color: '#6B7280', marginTop: '0.25rem' }}>
-                  Based on all grades entered across {Object.values(quarters).reduce((sum, g) => sum + g.length, 0)} entries
-                </div>
+                All Grades Average
               </div>
-
-              {/* Average Percentage — secondary card */}
               <div style={{
-                flex: '1 1 200px',
-                background: 'var(--bg)',
-                border: '1.5px solid var(--border)',
-                borderRadius: '14px',
-                padding: '1.25rem 1.5rem',
-                textAlign: 'center',
+                fontWeight: 800, fontSize: '2rem',
+                color: allGradesAvg !== null ? getGradeColor(Math.round(allGradesAvg)) : 'var(--text-light)',
+                lineHeight: 1.2,
               }}>
-                <div style={{
-                  fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase',
-                  letterSpacing: '0.06em', color: 'var(--text-muted)', marginBottom: '0.375rem',
-                }}>
-                  Average Percentage
-                </div>
-                {avgPercentage !== null ? (
-                  <>
-                    <div style={{
-                      fontWeight: 800, fontSize: '1.75rem',
-                      color: avgPercentage >= 70 ? '#059669' : avgPercentage >= 50 ? '#D97706' : '#DC2626',
-                      lineHeight: 1.2,
-                    }}>
-                      {avgPercentage}%
-                    </div>
-                    <div style={{ fontSize: '0.75rem', color: 'var(--text-light)', marginTop: '0.25rem' }}>
-                      Of grades with marks data
-                    </div>
-                  </>
-                ) : (
-                  <div style={{
-                    fontWeight: 600, fontSize: '0.85rem',
-                    color: 'var(--text-light)', lineHeight: 1.2, padding: '0.5rem 0',
-                  }}>
-                    No percentage data yet
-                  </div>
-                )}
+                {allGradesAvg !== null ? allGradesAvg.toFixed(2) : '–'}
+              </div>
+              <div style={{ fontSize: '0.75rem', color: '#6B7280', marginTop: '0.25rem' }}>
+                Based on all grades entered across {Object.values(quarters).reduce((sum, g) => sum + g.length, 0)} entries
               </div>
             </div>
 
@@ -686,6 +655,45 @@ export default function SubjectDetail() {
                   </div>
                 </div>
               ))}
+              {/* Average Percentage card */}
+              <div key="avg-pct" style={{
+                background: 'var(--bg)',
+                border: '1.5px solid var(--border)',
+                borderRadius: '12px',
+                padding: '0.875rem 1.25rem',
+                textAlign: 'center',
+                minWidth: '130px',
+                flex: '1 0 auto',
+                maxWidth: '170px',
+              }}>
+                <div style={{
+                  fontSize: '0.72rem', fontWeight: 700, textTransform: 'uppercase',
+                  letterSpacing: '0.04em', color: 'var(--text-muted)', marginBottom: '0.125rem',
+                }}>
+                  Average Percentage
+                </div>
+                <div style={{
+                  fontSize: '0.65rem', color: 'var(--text-light)',
+                  marginBottom: '0.375rem',
+                }}>
+                  Marks data
+                </div>
+                {avgPercentage !== null ? (
+                  <div style={{
+                    fontWeight: 700, fontSize: '1.2rem',
+                    color: avgPercentage >= 70 ? '#059669' : avgPercentage >= 50 ? '#D97706' : '#DC2626',
+                  }}>
+                    {avgPercentage.toFixed(1)}%
+                  </div>
+                ) : (
+                  <div style={{
+                    fontWeight: 600, fontSize: '0.75rem',
+                    color: 'var(--text-light)',
+                  }}>
+                    No data yet
+                  </div>
+                )}
+              </div>
             </div>
           </>
         )}
