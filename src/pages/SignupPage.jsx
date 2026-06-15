@@ -113,7 +113,7 @@ export default function SignupPage() {
               <label style={labelSt}>Nickname</label>
               <input
                 style={inputSt}
-                placeholder="How others will see you in rooms"
+                placeholder="Your display name"
                 value={form.nickname}
                 onChange={set('nickname')}
                 autoFocus

@@ -7,7 +7,7 @@ import {
   signInWithPopup,
 } from 'firebase/auth';
 import {
-  doc, setDoc, getDoc, updateDoc, serverTimestamp, arrayUnion,
+  doc, setDoc, getDoc, updateDoc, serverTimestamp,
 } from 'firebase/firestore';
 import { auth, db, googleProvider } from '../firebase';
 
@@ -50,7 +50,6 @@ export function AuthProvider({ children }) {
       lastActiveAt: serverTimestamp(),
       currentScore: 0,
       goalScore: 40,
-      roomsJoined: [],
     };
     try {
       await setDoc(doc(db, 'users', cred.user.uid), profileData);
@@ -101,7 +100,6 @@ export function AuthProvider({ children }) {
           lastActiveAt: serverTimestamp(),
           currentScore: 0,
           goalScore: 40,
-          roomsJoined: [],
         };
         await setDoc(userRef, profileData);
         setProfile(profileData);
@@ -129,22 +127,8 @@ export function AuthProvider({ children }) {
     } catch (e) { /* ignore */ }
   }
 
-  async function addRoomToProfile(code) {
-    if (!user) return;
-    try {
-      await updateDoc(doc(db, 'users', user.uid), {
-        roomsJoined: arrayUnion(code),
-        lastActiveAt: serverTimestamp(),
-      });
-      setProfile(prev => prev
-        ? { ...prev, roomsJoined: [...new Set([...(prev.roomsJoined || []), code])] }
-        : prev
-      );
-    } catch (e) { /* ignore */ }
-  }
-
   return (
-    <AuthContext.Provider value={{ user, profile, authLoading, signUp, logIn, logOut, signInWithGoogle, syncScore, addRoomToProfile }}>
+    <AuthContext.Provider value={{ user, profile, authLoading, signUp, logIn, logOut, signInWithGoogle, syncScore }}>
       {children}
     </AuthContext.Provider>
   );

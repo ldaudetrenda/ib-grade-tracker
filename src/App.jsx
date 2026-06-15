@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Routes, Route, Link, useLocation, useNavigate } from 'react-router-dom';
-import { BookOpen, LayoutDashboard, Settings as SettingsIcon, Menu, X, Trophy, UserCircle, LogOut, Info, GraduationCap } from 'lucide-react';
+import { BookOpen, LayoutDashboard, Settings as SettingsIcon, Menu, X, UserCircle, LogOut, Info, GraduationCap } from 'lucide-react';
 import { useApp, getTotalScore } from './context/AppContext';
 import { logEvent } from './analytics';
 import { AuthProvider, useAuth } from './context/AuthContext';
@@ -8,7 +8,6 @@ import Setup from './pages/Setup';
 import Dashboard from './pages/Dashboard';
 import SubjectDetail from './pages/SubjectDetail';
 import Settings from './pages/Settings';
-import Rooms from './pages/Rooms';
 import LoginPage from './pages/LoginPage';
 import SignupPage from './pages/SignupPage';
 import HowItWorksPage from './pages/HowItWorksPage';
@@ -40,11 +39,6 @@ function Navbar() {
         style={{ display: 'flex', alignItems: 'center', gap: '0.375rem' }}
         onClick={() => setMenuOpen(false)}>
         <LayoutDashboard size={15} /> Dashboard
-      </Link>
-      <Link to="/rooms" className={`nav-link ${isActive('/rooms') ? 'active' : ''}`}
-        style={{ display: 'flex', alignItems: 'center', gap: '0.375rem' }}
-        onClick={() => setMenuOpen(false)}>
-        <Trophy size={15} /> Rooms
       </Link>
       <Link to="/dream-university" className={`nav-link ${isActive('/dream-university') ? 'active' : ''}`}
         style={{ display: 'flex', alignItems: 'center', gap: '0.375rem' }}
@@ -180,7 +174,6 @@ function AppInner() {
         <Route path="/tok" element={<SubjectDetail />} />
         <Route path="/settings" element={<Settings />} />
         <Route path="/setup/edit" element={<Setup editMode />} />
-        <Route path="/rooms" element={<Rooms />} />
         <Route path="/dream-university" element={<DreamUniversity />} />
         <Route path="/how-it-works" element={<HowItWorksPage />} />
         <Route path="/login" element={<LoginPage />} />

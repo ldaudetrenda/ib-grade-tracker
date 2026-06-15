@@ -152,7 +152,6 @@ export function IbGradeTrackerPage() {
         <li style={liSt}><strong>Progress history</strong> — log quarterly grades and compare improvement over time</li>
         <li style={liSt}><strong>Progress graphs</strong> — visualize grade trends with built-in bar and line charts</li>
         <li style={liSt}><strong>University targets</strong> — link your target score to your Dream University's requirements</li>
-        <li style={liSt}><strong>Rooms</strong> — compare anonymously with classmates in shared score rooms</li>
       </ul>
 
       <h2 style={h2St}>Why Use IB Grade Tracker?</h2>
