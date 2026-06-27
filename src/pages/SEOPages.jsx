@@ -18,27 +18,49 @@ const SEO_LINKS = [
 const h1St = { fontSize: '2rem', fontWeight: 800, color: '#1e1b4b', marginBottom: '0.75rem', lineHeight: 1.25 };
 const introSt = { fontSize: '1.05rem', color: '#374151', lineHeight: 1.75, marginBottom: '1.5rem' };
 const h2St = { fontSize: '1.2rem', fontWeight: 700, color: '#1e1b4b', marginTop: '2rem', marginBottom: '0.625rem' };
+const h3St = { fontSize: '1.05rem', fontWeight: 700, color: '#1e1b4b', marginTop: '1.5rem', marginBottom: '0.5rem' };
 const pSt = { fontSize: '0.95rem', color: '#374151', lineHeight: 1.75, marginBottom: '1rem' };
 const ulSt = { paddingLeft: '1.5rem', marginBottom: '1rem' };
 const liSt = { fontSize: '0.95rem', color: '#374151', lineHeight: 1.75, marginBottom: '0.375rem' };
+const olSt = { paddingLeft: '1.5rem', marginBottom: '1rem', listStyleType: 'decimal' };
 
 // ─── Shared Layout ──────────────────────────────────────────────────────────────
+function setMeta(selector, attr, val) {
+  const el = document.querySelector(selector);
+  if (el) el.setAttribute(attr, val);
+}
+
 function SEOLayout({ title, description, canonical, children }) {
   useEffect(() => {
     const prevTitle = document.title;
-    const metaDesc = document.querySelector('meta[name="description"]');
-    const prevDesc = metaDesc ? metaDesc.getAttribute('content') : '';
-    const canonEl = document.querySelector('link[rel="canonical"]');
-    const prevCanon = canonEl ? canonEl.getAttribute('href') : '';
+    const prevDesc = document.querySelector('meta[name="description"]')?.getAttribute('content') || '';
+    const prevCanon = document.querySelector('link[rel="canonical"]')?.getAttribute('href') || '';
+    const prevOgTitle = document.querySelector('meta[property="og:title"]')?.getAttribute('content') || '';
+    const prevOgDesc = document.querySelector('meta[property="og:description"]')?.getAttribute('content') || '';
+    const prevOgUrl = document.querySelector('meta[property="og:url"]')?.getAttribute('content') || '';
+    const prevTwitterTitle = document.querySelector('meta[name="twitter:title"]')?.getAttribute('content') || '';
+    const prevTwitterDesc = document.querySelector('meta[name="twitter:description"]')?.getAttribute('content') || '';
 
     document.title = title;
-    if (metaDesc) metaDesc.setAttribute('content', description);
-    if (canonEl) canonEl.setAttribute('href', canonical);
+    setMeta('meta[name="description"]', 'content', description);
+    setMeta('link[rel="canonical"]', 'href', canonical);
+    setMeta('meta[property="og:title"]', 'content', title);
+    setMeta('meta[property="og:description"]', 'content', description);
+    setMeta('meta[property="og:url"]', 'content', canonical);
+    setMeta('meta[name="twitter:title"]', 'content', title);
+    setMeta('meta[name="twitter:description"]', 'content', description);
+    setMeta('meta[name="twitter:url"]', 'content', canonical);
 
     return () => {
       document.title = prevTitle;
-      if (metaDesc) metaDesc.setAttribute('content', prevDesc);
-      if (canonEl) canonEl.setAttribute('href', prevCanon);
+      setMeta('meta[name="description"]', 'content', prevDesc);
+      setMeta('link[rel="canonical"]', 'href', prevCanon);
+      setMeta('meta[property="og:title"]', 'content', prevOgTitle);
+      setMeta('meta[property="og:description"]', 'content', prevOgDesc);
+      setMeta('meta[property="og:url"]', 'content', prevOgUrl);
+      setMeta('meta[name="twitter:title"]', 'content', prevTwitterTitle);
+      setMeta('meta[name="twitter:description"]', 'content', prevTwitterDesc);
+      setMeta('meta[name="twitter:url"]', 'content', canonical);
     };
   }, [title, description, canonical]);
 
@@ -149,9 +171,9 @@ export function IbGradeTrackerPage() {
       <h2 style={h2St}>Key Features</h2>
       <ul style={ulSt}>
         <li style={liSt}><strong>Subject grade tracking</strong> — log grades for up to 6 HL and SL subjects with individual goals</li>
-        <li style={liSt}><strong>Predicted score calculator</strong> — see your estimated final IB total in real time</li>
+        <li style={liSt}><strong>Predicted score calculator</strong> — see your estimated final IB total in real time with our <a href="/ib-predicted-grade-calculator" style={{ color: '#4F46E5' }}>IB predicted grade calculator</a></li>
         <li style={liSt}><strong>Core points tracking</strong> — monitor TOK and Extended Essay grades and their bonus point contribution</li>
-        <li style={liSt}><strong>Progress history</strong> — log quarterly grades and compare improvement over time</li>
+        <li style={liSt}><strong>Progress history</strong> — log quarterly grades and compare improvement over time via the <a href="/ib-progress-tracker" style={{ color: '#4F46E5' }}>IB progress tracker</a></li>
         <li style={liSt}><strong>Progress graphs</strong> — visualize grade trends with built-in bar and line charts</li>
         <li style={liSt}><strong>University targets</strong> — link your target score to your Dream University's requirements</li>
       </ul>
@@ -227,7 +249,7 @@ export function IbGradeCalculatorPage() {
       </ul>
 
       <h2 style={h2St}>Common IB Score Benchmarks</h2>
-      <p style={pSt}>When setting your goal in the IB grade calculator, these benchmarks are commonly used by IB students:</p>
+      <p style={pSt}>When setting your goal in the IB grade calculator, these benchmarks are commonly used by IB students. You can also use the <a href="/ib-score-tracker" style={{ color: '#4F46E5' }}>IB score tracker</a> to monitor your total in real time:</p>
       <ul style={ulSt}>
         <li style={liSt}><strong>24 points</strong> — minimum for the IB Diploma (subject to other requirements)</li>
         <li style={liSt}><strong>30–32 points</strong> — typical range for many university programs</li>
@@ -285,7 +307,7 @@ export function IbPredictedGradeCalculatorPage() {
 
       <h2 style={h2St}>Tracking Predicted Grades Over Time</h2>
       <p style={pSt}>
-        One of the most powerful aspects of IB Grade Tracker's predicted grade calculator is the progress history feature. You log your grades at the end of each quarter and build a complete timeline of your performance. This lets you see:
+        One of the most powerful aspects of IB Grade Tracker's predicted grade calculator is the <a href="/ib-progress-tracker" style={{ color: '#4F46E5' }}>IB progress tracker</a> feature. You log your grades at the end of each quarter and build a complete timeline of your performance. This lets you see:
       </p>
       <ul style={ulSt}>
         <li style={liSt}>Whether your predicted total is trending upward or declining</li>
@@ -331,7 +353,7 @@ export function IbProgressTrackerPage() {
 
       <h2 style={h2St}>Why You Need an IB Progress Tracker</h2>
       <p style={pSt}>
-        The IB Diploma Programme runs across two years and involves six subjects, three core components, and multiple rounds of assessment. Without a dedicated IB progress tracker, it's easy to lose sight of whether you're improving, plateauing, or drifting behind in specific subjects.
+        The IB Diploma Programme runs across two years and involves six subjects, three core components, and multiple rounds of assessment. Without a dedicated IB progress tracker, it's easy to lose sight of whether you're improving, plateauing, or drifting behind in specific subjects. Combined with the <a href="/ib-score-tracker" style={{ color: '#4F46E5' }}>IB score tracker</a>, you get a complete picture of your performance.
       </p>
       <p style={pSt}>
         IB Grade Tracker gives you a structured space to record every quarter's grades. Over time, you build a complete timeline of your performance — not just a single snapshot, but a full history you can learn from and act on.
@@ -408,7 +430,7 @@ export function IbOrganizerPage() {
 
       <h2 style={h2St}>Track Core Points: TOK, EE, and CAS</h2>
       <p style={pSt}>
-        Core points are the most frequently underestimated part of the IB. TOK and Extended Essay together can contribute up to 3 bonus points to your total — the difference between a 39 and a 42, or between passing and reaching a target university's offer. CAS, while not scored numerically, must be completed to receive the diploma.
+        Core points are the most frequently underestimated part of the IB. TOK and Extended Essay together can contribute up to 3 bonus points to your total — the difference between a 39 and a 42, or between passing and reaching a target university's offer. For a full explanation of core points, visit our <a href="/ib-help" style={{ color: '#4F46E5' }}>IB Help</a> page. CAS, while not scored numerically, must be completed to receive the diploma.
       </p>
       <p style={pSt}>
         IB Grade Tracker's IB organizer includes a dedicated section for core components. You can track your TOK grade (A–E), your EE grade (A–E), and see in real time how these combine to determine your bonus point total. Your predicted total score always reflects the complete picture — not just subject grades.
@@ -467,7 +489,7 @@ export function IbHelpPage() {
       </ul>
 
       <h2 style={h2St}>The 45-Point IB Scoring System</h2>
-      <p style={pSt}>The maximum IB Diploma score is 45 points, made up of two components:</p>
+      <p style={pSt}>The maximum IB Diploma score is 45 points, made up of two components. You can use the <a href="/ib-grade-calculator" style={{ color: '#4F46E5' }}>IB grade calculator</a> to see how your own grades add up:</p>
       <ul style={ulSt}>
         <li style={liSt}><strong>Subject scores</strong>: 6 subjects × up to 7 points each = up to 42 points</li>
         <li style={liSt}><strong>Core bonus points</strong>: up to 3 additional points from your TOK + Extended Essay grades combined</li>
@@ -635,6 +657,107 @@ export function IbScoreTrackerPage() {
       <p style={pSt}>
         Tracking your IB score takes less than two minutes to set up. Enter your subjects, set your goals, and log your current grades. From that point, your score tracker is live and updates automatically every time you add new data.
       </p>
+
+      <CTABox />
+    </SEOLayout>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// HOMEPAGE: /
+// ─────────────────────────────────────────────────────────────────────────────
+export function Homepage() {
+  return (
+    <SEOLayout
+      title="IB Grade Tracker | Track IB Grades, Predicted Scores & Progress"
+      description="IB Grade Tracker is a free, student-made tool for IB Diploma students. Track grades, predicted scores, subject goals, core points, and progress across quarters — all in one dashboard."
+      canonical={`${SITE}/`}
+    >
+      <h1 style={h1St}>IB Grade Tracker — Track Your IB Diploma Journey</h1>
+      <p style={introSt}>
+        <strong>IB Grade Tracker</strong> is a free, student-made web app built specifically for International Baccalaureate Diploma students. It helps you track your subject grades, monitor predicted scores, set per-subject goals, manage TOK and Extended Essay core points, and visualize your progress across all eight quarters of the IB programme — all in one clean dashboard.
+      </p>
+
+      <h2 style={h2St}>What Is IB Grade Tracker?</h2>
+      <p style={pSt}>
+        IB Grade Tracker is a purpose-built tool for IB Diploma students who want a clear, real-time view of their academic performance. Instead of juggling spreadsheets, notes apps, and school portals, you get a single dashboard that automatically calculates your predicted total, compares it against your target, and shows exactly which subjects need the most work.
+      </p>
+      <p style={pSt}>
+        The app understands the IB's unique structure: HL and SL subject levels, the 45-point scoring system, core bonus points from TOK and the Extended Essay, quarterly grade tracking across two years, and per-subject goal setting. Everything updates automatically when you log a new grade — no manual calculations required.
+      </p>
+
+      <h2 style={h2St}>Who Is IB Grade Tracker For?</h2>
+      <p style={pSt}>
+        IB Grade Tracker is for any student enrolled in the International Baccalaureate Diploma Programme. Whether you are in your first year of IB and just starting to collect grades, or in your final year preparing for exams and university applications, IB Grade Tracker helps you stay organized and focused.
+      </p>
+      <p style={pSt}>
+        It is especially useful if you are aiming for a competitive university that requires a specific IB score — knowing your predicted total at every moment helps you plan your study time around the subjects that need the most improvement.
+      </p>
+
+      <h2 style={h2St}>Main Features</h2>
+      <ul style={ulSt}>
+        <li style={liSt}><strong>Subject grade tracking</strong> — Log grades for up to 6 HL and SL subjects with individual goal grades</li>
+        <li style={liSt}><strong>Predicted score calculator</strong> — See your estimated IB total in real time, updated with every grade entry</li>
+        <li style={liSt}><strong>Core points management</strong> — Track TOK and Extended Essay grades and their bonus point contribution</li>
+        <li style={liSt}><strong>Quarterly progress history</strong> — Log grades across 8 quarters (Year 1 and Year 2) and build a full timeline</li>
+        <li style={liSt}><strong>Progress graphs</strong> — Visualize grade trends with built-in bar charts and per-subject line charts</li>
+        <li style={liSt}><strong>Dream University targets</strong> — Connect your target score to a real university programme's IB requirements</li>
+        <li style={liSt}><strong>PDF and image import</strong> — Import grades from report card PDFs, screenshots, or paste text</li>
+      </ul>
+
+      <h2 style={h2St}>A Student-Made Project</h2>
+      <p style={pSt}>
+        IB Grade Tracker was built by a current IB student who needed a better way to track their own grades. Existing tools were either too generic (spreadsheets, notes apps) or required manual calculations that quickly became outdated. The goal was to create something that any IB student could use for free, with no installation, no account required to start, and complete privacy for their grade data.
+      </p>
+      <p style={pSt}>
+        The app stores your grades locally in your browser by default. If you choose to create an account, your data is synced so you can access it across devices. There are no ads, no data sharing, and no affiliation with the International Baccalaureate Organization.
+      </p>
+
+      <h2 style={h2St}>How It Works</h2>
+      <ol style={olSt}>
+        <li style={liSt}>Open IB Grade Tracker and enter your name to get started</li>
+        <li style={liSt}>Select your 6 IB subjects (3 HL + 3 SL) from the full subject list</li>
+        <li style={liSt}>Set a target grade for each subject and an overall IB score goal</li>
+        <li style={liSt}>Log your current grades — the dashboard instantly shows your predicted total</li>
+        <li style={liSt}>Return each quarter to update your grades and watch your progress over time</li>
+      </ol>
+
+      <h2 style={h2St}>Explore IB Grade Tracker Tools</h2>
+      <p style={pSt}>
+        IB Grade Tracker includes several integrated tools designed to help you manage different aspects of the IB Diploma:
+      </p>
+      <ul style={ulSt}>
+        <li style={liSt}><Link to="/ib-grade-calculator" style={{ color: '#4F46E5' }}>IB Grade Calculator</Link> — automatically calculates your total score from subject grades and core points</li>
+        <li style={liSt}><Link to="/ib-predicted-grade-calculator" style={{ color: '#4F46E5' }}>IB Predicted Grade Calculator</Link> — estimates your final IB score based on current grades across all subjects</li>
+        <li style={liSt}><Link to="/ib-progress-tracker" style={{ color: '#4F46E5' }}>IB Progress Tracker</Link> — tracks your grade history and improvement across quarters</li>
+        <li style={liSt}><Link to="/ib-score-tracker" style={{ color: '#4F46E5' }}>IB Score Tracker</Link> — monitor your total score, subject scores, and goal gaps in real time</li>
+        <li style={liSt}><Link to="/ib-organizer" style={{ color: '#4F46E5' }}>IB Organizer</Link> — organize subjects, core points, and university targets in one dashboard</li>
+        <li style={liSt}><Link to="/ib-student-planner" style={{ color: '#4F46E5' }}>IB Student Planner</Link> — plan your IB journey with goal tracking and quarterly progress data</li>
+        <li style={liSt}><Link to="/ib-help" style={{ color: '#4F46E5' }}>IB Help</Link> — understand IB grades, predicted scores, core points, and the 45-point system</li>
+      </ul>
+
+      <h2 style={h2St}>Frequently Asked Questions</h2>
+
+      <h3 style={h3St}>Is IB Grade Tracker free?</h3>
+      <p style={pSt}>Yes. IB Grade Tracker is completely free to use. There are no paid plans, subscriptions, or hidden features. The app was built by a student and is maintained as a free resource for the IB community.</p>
+
+      <h3 style={h3St}>Do I need to create an account?</h3>
+      <p style={pSt}>No account is required to start tracking your grades. Your data is stored in your browser's local storage by default. Creating an account (free) syncs your data across devices so you can access it from any computer or phone.</p>
+
+      <h3 style={h3St}>Can I track TOK and EE core points?</h3>
+      <p style={pSt}>Yes. IB Grade Tracker has a dedicated core points section where you can log your TOK and Extended Essay grades (A–E). The app automatically calculates your bonus point total (0–3) and includes it in your predicted overall score.</p>
+
+      <h3 style={h3St}>Can I track progress across multiple quarters?</h3>
+      <p style={pSt}>Yes. The app divides the IB programme into 8 quarters across Year 1 and Year 2. You log grades each quarter and build a complete grade history. The dashboard shows your total score trend and per-subject charts so you can see how you are improving over time.</p>
+
+      <h3 style={h3St}>Is IB Grade Tracker affiliated with the International Baccalaureate?</h3>
+      <p style={pSt}>No. IB Grade Tracker is an independent, student-made project. It is not affiliated with, endorsed by, or connected to the International Baccalaureate Organization (IBO). The app uses "IB" descriptively to refer to the IB Diploma Programme that users are enrolled in.</p>
+
+      <h3 style={h3St}>Can I import grades from a PDF or screenshot?</h3>
+      <p style={pSt}>Yes. IB Grade Tracker supports importing grades from PDF report cards, screenshots, and pasted text. You can use the import feature on the dashboard to quickly populate your grade entries without typing everything manually.</p>
+
+      <h3 style={h3St}>What happens to my data?</h3>
+      <p style={pSt}>Your grade data is stored locally in your browser. If you create an account, it is synced to Firebase for cross-device access. Your data is never shared, sold, or used for anything other than powering your IB Grade Tracker dashboard.</p>
 
       <CTABox />
     </SEOLayout>
