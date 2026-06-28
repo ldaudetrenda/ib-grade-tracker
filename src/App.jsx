@@ -1,20 +1,18 @@
-import React, { useState, useEffect, lazy, Suspense } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Routes, Route, Link, useLocation, useNavigate } from 'react-router-dom';
 import { BookOpen, LayoutDashboard, Settings as SettingsIcon, Menu, X, UserCircle, LogOut, Info, GraduationCap } from 'lucide-react';
 import { useApp, getTotalScore } from './context/AppContext';
 import { logEvent } from './analytics';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import Setup from './pages/Setup';
+import Dashboard from './pages/Dashboard';
 import SubjectDetail from './pages/SubjectDetail';
 import Settings from './pages/Settings';
 import LoginPage from './pages/LoginPage';
 import SignupPage from './pages/SignupPage';
 import HowItWorksPage from './pages/HowItWorksPage';
 import DreamUniversity from './pages/DreamUniversity';
-import { IbGradeTrackerPage, IbGradeCalculatorPage, IbPredictedGradeCalculatorPage, IbProgressTrackerPage, IbOrganizerPage, IbStudentPlannerPage, IbScoreTrackerPage, IbHelpPage, Homepage } from './pages/SEOPages';
-
-// Lazy-load Dashboard — it imports recharts, pdfjs-dist, tesseract.js which are heavy
-const Dashboard = lazy(() => import('./pages/Dashboard'));
+import { IbGradeTrackerPage, IbGradeCalculatorPage, IbPredictedGradeCalculatorPage, IbProgressTrackerPage, IbOrganizerPage, IbStudentPlannerPage, IbScoreTrackerPage, IbHelpPage } from './pages/SEOPages';
 
 const SEO_PATHS = new Set(['/ib-grade-tracker', '/ib-grade-calculator', '/ib-predicted-grade-calculator', '/ib-progress-tracker', '/ib-organizer', '/ib-student-planner', '/ib-score-tracker', '/ib-help']);
 
@@ -145,7 +143,6 @@ function Navbar() {
 // ─── Inner App (needs AuthContext) ────────────────────────────────────────────
 function AppInner() {
   const { state } = useApp();
-  const { user, authLoading } = useAuth();
   const location = useLocation();
 
   useEffect(() => { logEvent('app_opened'); }, []);
@@ -166,14 +163,6 @@ function AppInner() {
     );
   }
 
-  // Homepage: show landing page for crawlers and non-authenticated visitors
-  if (location.pathname === '/') {
-    if (authLoading || !user) {
-      return <Homepage />;
-    }
-    // Logged-in user falls through to the app below
-  }
-
   if (!state.isSetupComplete) {
     return <Setup />;
   }
@@ -181,7 +170,6 @@ function AppInner() {
   return (
     <div>
       <Navbar />
-      <Suspense fallback={<div style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-muted)' }}>Loading dashboard...</div>}>
       <Routes>
         <Route path="/" element={<Dashboard />} />
         <Route path="/subject/:id" element={<SubjectDetail />} />
@@ -194,7 +182,6 @@ function AppInner() {
         <Route path="/signup" element={<SignupPage />} />
         <Route path="*" element={<Dashboard />} />
       </Routes>
-      </Suspense>
     </div>
   );
 }
