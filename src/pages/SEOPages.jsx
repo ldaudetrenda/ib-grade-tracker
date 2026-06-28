@@ -26,19 +26,39 @@ const liSt = { fontSize: '0.95rem', color: '#374151', lineHeight: 1.75, marginBo
 function SEOLayout({ title, description, canonical, children }) {
   useEffect(() => {
     const prevTitle = document.title;
-    const metaDesc = document.querySelector('meta[name="description"]');
-    const prevDesc = metaDesc ? metaDesc.getAttribute('content') : '';
-    const canonEl = document.querySelector('link[rel="canonical"]');
-    const prevCanon = canonEl ? canonEl.getAttribute('href') : '';
+    const prevDesc = document.querySelector('meta[name="description"]')?.getAttribute('content') || '';
+    const prevCanon = document.querySelector('link[rel="canonical"]')?.getAttribute('href') || '';
+    const prevOgTitle = document.querySelector('meta[property="og:title"]')?.getAttribute('content') || '';
+    const prevOgDesc = document.querySelector('meta[property="og:description"]')?.getAttribute('content') || '';
+    const prevOgUrl = document.querySelector('meta[property="og:url"]')?.getAttribute('content') || '';
+    const prevTwitterTitle = document.querySelector('meta[name="twitter:title"]')?.getAttribute('content') || '';
+    const prevTwitterDesc = document.querySelector('meta[name="twitter:description"]')?.getAttribute('content') || '';
+
+    function setMeta(sel, attr, val) {
+      const el = document.querySelector(sel);
+      if (el) el.setAttribute(attr, val);
+    }
 
     document.title = title;
-    if (metaDesc) metaDesc.setAttribute('content', description);
-    if (canonEl) canonEl.setAttribute('href', canonical);
+    setMeta('meta[name="description"]', 'content', description);
+    setMeta('link[rel="canonical"]', 'href', canonical);
+    setMeta('meta[property="og:title"]', 'content', title);
+    setMeta('meta[property="og:description"]', 'content', description);
+    setMeta('meta[property="og:url"]', 'content', canonical);
+    setMeta('meta[name="twitter:title"]', 'content', title);
+    setMeta('meta[name="twitter:description"]', 'content', description);
+    setMeta('meta[name="twitter:url"]', 'content', canonical);
 
     return () => {
       document.title = prevTitle;
-      if (metaDesc) metaDesc.setAttribute('content', prevDesc);
-      if (canonEl) canonEl.setAttribute('href', prevCanon);
+      setMeta('meta[name="description"]', 'content', prevDesc);
+      setMeta('link[rel="canonical"]', 'href', prevCanon);
+      setMeta('meta[property="og:title"]', 'content', prevOgTitle);
+      setMeta('meta[property="og:description"]', 'content', prevOgDesc);
+      setMeta('meta[property="og:url"]', 'content', prevOgUrl);
+      setMeta('meta[name="twitter:title"]', 'content', prevTwitterTitle);
+      setMeta('meta[name="twitter:description"]', 'content', prevTwitterDesc);
+      setMeta('meta[name="twitter:url"]', 'content', canonical);
     };
   }, [title, description, canonical]);
 
@@ -149,7 +169,7 @@ export function IbGradeTrackerPage() {
       <h2 style={h2St}>Key Features</h2>
       <ul style={ulSt}>
         <li style={liSt}><strong>Subject grade tracking</strong> — log grades for up to 6 HL and SL subjects with individual goals</li>
-        <li style={liSt}><strong>Predicted score calculator</strong> — see your estimated final IB total in real time</li>
+        <li style={liSt}><strong>Predicted score calculator</strong> — see your estimated final IB total in real time with our <a href="/ib-predicted-grade-calculator" style={{ color: '#4F46E5' }}>IB predicted grade calculator</a></li>
         <li style={liSt}><strong>Core points tracking</strong> — monitor TOK and Extended Essay grades and their bonus point contribution</li>
         <li style={liSt}><strong>Progress history</strong> — log quarterly grades and compare improvement over time</li>
         <li style={liSt}><strong>Progress graphs</strong> — visualize grade trends with built-in bar and line charts</li>
@@ -227,7 +247,7 @@ export function IbGradeCalculatorPage() {
       </ul>
 
       <h2 style={h2St}>Common IB Score Benchmarks</h2>
-      <p style={pSt}>When setting your goal in the IB grade calculator, these benchmarks are commonly used by IB students:</p>
+      <p style={pSt}>When setting your goal in the IB grade calculator, these benchmarks are commonly used by IB students. You can also use the <a href="/ib-score-tracker" style={{ color: '#4F46E5' }}>IB score tracker</a> to monitor your total in real time:</p>
       <ul style={ulSt}>
         <li style={liSt}><strong>24 points</strong> — minimum for the IB Diploma (subject to other requirements)</li>
         <li style={liSt}><strong>30–32 points</strong> — typical range for many university programs</li>
@@ -285,7 +305,7 @@ export function IbPredictedGradeCalculatorPage() {
 
       <h2 style={h2St}>Tracking Predicted Grades Over Time</h2>
       <p style={pSt}>
-        One of the most powerful aspects of IB Grade Tracker's predicted grade calculator is the progress history feature. You log your grades at the end of each quarter and build a complete timeline of your performance. This lets you see:
+        One of the most powerful aspects of IB Grade Tracker's predicted grade calculator is the <a href="/ib-progress-tracker" style={{ color: '#4F46E5' }}>IB progress tracker</a> feature. You log your grades at the end of each quarter and build a complete timeline of your performance. This lets you see:
       </p>
       <ul style={ulSt}>
         <li style={liSt}>Whether your predicted total is trending upward or declining</li>
@@ -331,7 +351,7 @@ export function IbProgressTrackerPage() {
 
       <h2 style={h2St}>Why You Need an IB Progress Tracker</h2>
       <p style={pSt}>
-        The IB Diploma Programme runs across two years and involves six subjects, three core components, and multiple rounds of assessment. Without a dedicated IB progress tracker, it's easy to lose sight of whether you're improving, plateauing, or drifting behind in specific subjects.
+        The IB Diploma Programme runs across two years and involves six subjects, three core components, and multiple rounds of assessment. Without a dedicated IB progress tracker, it's easy to lose sight of whether you're improving, plateauing, or drifting behind in specific subjects. Combined with the <a href="/ib-score-tracker" style={{ color: '#4F46E5' }}>IB score tracker</a>, you get a complete view of your performance.
       </p>
       <p style={pSt}>
         IB Grade Tracker gives you a structured space to record every quarter's grades. Over time, you build a complete timeline of your performance — not just a single snapshot, but a full history you can learn from and act on.
@@ -467,7 +487,7 @@ export function IbHelpPage() {
       </ul>
 
       <h2 style={h2St}>The 45-Point IB Scoring System</h2>
-      <p style={pSt}>The maximum IB Diploma score is 45 points, made up of two components:</p>
+      <p style={pSt}>The maximum IB Diploma score is 45 points, made up of two components. You can use the <a href="/ib-grade-calculator" style={{ color: '#4F46E5' }}>IB grade calculator</a> to see how your own grades add up:</p>
       <ul style={ulSt}>
         <li style={liSt}><strong>Subject scores</strong>: 6 subjects × up to 7 points each = up to 42 points</li>
         <li style={liSt}><strong>Core bonus points</strong>: up to 3 additional points from your TOK + Extended Essay grades combined</li>

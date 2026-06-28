@@ -1,11 +1,13 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, lazy, Suspense } from 'react';
 import { Routes, Route, Link, useLocation, useNavigate } from 'react-router-dom';
 import { BookOpen, LayoutDashboard, Settings as SettingsIcon, Menu, X, UserCircle, LogOut, Info, GraduationCap } from 'lucide-react';
 import { useApp, getTotalScore } from './context/AppContext';
 import { logEvent } from './analytics';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import Setup from './pages/Setup';
-import Dashboard from './pages/Dashboard';
+
+// Lazy-load Dashboard — imports recharts, pdfjs-dist, tesseract.js
+const Dashboard = lazy(() => import('./pages/Dashboard'));
 import SubjectDetail from './pages/SubjectDetail';
 import Settings from './pages/Settings';
 import LoginPage from './pages/LoginPage';
@@ -170,6 +172,7 @@ function AppInner() {
   return (
     <div>
       <Navbar />
+      <Suspense fallback={<div style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-muted)' }}>Loading dashboard...</div>}>
       <Routes>
         <Route path="/" element={<Dashboard />} />
         <Route path="/subject/:id" element={<SubjectDetail />} />
@@ -182,6 +185,7 @@ function AppInner() {
         <Route path="/signup" element={<SignupPage />} />
         <Route path="*" element={<Dashboard />} />
       </Routes>
+      </Suspense>
     </div>
   );
 }
